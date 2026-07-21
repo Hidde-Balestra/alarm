@@ -49,43 +49,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
       body: ListView(
         children: [
           _SectionHeader(title: l10n.settingsThemeSection),
-          RadioListTile<ThemeMode>(
-            title: Text(l10n.themeSystem),
-            value: ThemeMode.system,
+          RadioGroup<ThemeMode>(
             groupValue: settings.themeMode,
-            onChanged: (value) => notifier.setThemeMode(value!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: Text(l10n.themeLight),
-            value: ThemeMode.light,
-            groupValue: settings.themeMode,
-            onChanged: (value) => notifier.setThemeMode(value!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: Text(l10n.themeDark),
-            value: ThemeMode.dark,
-            groupValue: settings.themeMode,
-            onChanged: (value) => notifier.setThemeMode(value!),
+            onChanged: (value) => notifier.setThemeMode(value ?? settings.themeMode),
+            child: Column(
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: Text(l10n.themeSystem),
+                  value: ThemeMode.system,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text(l10n.themeLight),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text(l10n.themeDark),
+                  value: ThemeMode.dark,
+                ),
+              ],
+            ),
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsLanguageSection),
-          RadioListTile<AppLanguage>(
-            title: Text(l10n.languageSystem),
-            value: AppLanguage.system,
+          RadioGroup<AppLanguage>(
             groupValue: settings.language,
-            onChanged: (value) => notifier.setLanguage(value!),
-          ),
-          RadioListTile<AppLanguage>(
-            title: Text(l10n.languageDutch),
-            value: AppLanguage.dutch,
-            groupValue: settings.language,
-            onChanged: (value) => notifier.setLanguage(value!),
-          ),
-          RadioListTile<AppLanguage>(
-            title: Text(l10n.languageEnglish),
-            value: AppLanguage.english,
-            groupValue: settings.language,
-            onChanged: (value) => notifier.setLanguage(value!),
+            onChanged: (value) => notifier.setLanguage(value ?? settings.language),
+            child: Column(
+              children: [
+                RadioListTile<AppLanguage>(
+                  title: Text(l10n.languageSystem),
+                  value: AppLanguage.system,
+                ),
+                RadioListTile<AppLanguage>(
+                  title: Text(l10n.languageDutch),
+                  value: AppLanguage.dutch,
+                ),
+                RadioListTile<AppLanguage>(
+                  title: Text(l10n.languageEnglish),
+                  value: AppLanguage.english,
+                ),
+              ],
+            ),
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsDefaultsSection),
