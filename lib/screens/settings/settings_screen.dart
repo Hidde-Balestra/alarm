@@ -38,6 +38,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (mounted) setState(() => _permissionStatus = status);
   }
 
+  Future<void> _ringTestAlarm(BuildContext context, AppLocalizations l10n) async {
+    await ref.read(schedulerServiceProvider).scheduleTestAlarm(
+          delay: const Duration(seconds: 5),
+          notificationTitle: l10n.testAlarmTitle,
+          notificationBody: l10n.testAlarmTitle,
+          stopButtonLabel: l10n.dismiss,
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.testAlarmScheduledMessage)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -140,6 +153,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             permission: ReliabilityPermission.batteryOptimization,
             granted: _permissionStatus[ReliabilityPermission.batteryOptimization] ?? false,
             onRefresh: _refreshPermissions,
+          ),
+          const Divider(),
+          _SectionHeader(title: l10n.settingsTestSection),
+          ListTile(
+            title: Text(l10n.testAlarmTitle),
+            subtitle: Text(l10n.testAlarmDescription),
+            isThreeLine: true,
+            trailing: FilledButton(
+              onPressed: () => _ringTestAlarm(context, l10n),
+              child: Text(l10n.testAlarmButton),
+            ),
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsAboutSection),

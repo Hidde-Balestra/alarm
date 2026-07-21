@@ -66,4 +66,16 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
 
   @override
   Future<void> stopRingingByPayload(String? payload) async {}
+
+  int testAlarmScheduledCount = 0;
+
+  @override
+  Future<void> scheduleTestAlarm({
+    required Duration delay,
+    required String notificationTitle,
+    required String notificationBody,
+    required String stopButtonLabel,
+  }) async {
+    testAlarmScheduledCount++;
+  }
 }

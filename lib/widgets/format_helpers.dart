@@ -1,10 +1,25 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 String formatTimeOfDay(BuildContext context, int hour, int minute) {
   final time = TimeOfDay(hour: hour, minute: minute);
   return time.format(context);
+}
+
+String formatDate(BuildContext context, DateTime date) {
+  final locale = Localizations.localeOf(context).toString();
+  return DateFormat.yMMMd(locale).format(date);
+}
+
+/// Human-readable "Next: Mon, Aug 3, 07:00" (or the "pick a day" hint when
+/// [next] is null because no weekday is selected yet).
+String formatNextOccurrence(BuildContext context, AppLocalizations l10n, DateTime? next) {
+  if (next == null) return l10n.nextOccurrenceUnknown;
+  final locale = Localizations.localeOf(context).toString();
+  final formatted = DateFormat.MMMEd(locale).add_Hm().format(next);
+  return l10n.nextOccurrenceLabel(formatted);
 }
 
 String repeatSummary(AppLocalizations l10n, RepeatRule repeat) {

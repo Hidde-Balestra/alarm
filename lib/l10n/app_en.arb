@@ -24,6 +24,13 @@
   "repeatDaily": "Every day",
   "repeatWeekly": "Weekly on selected days",
   "repeatBiweekly": "Every other week",
+  "repeatBiweeklyStartLabel": "Starting week",
+  "repeatBiweeklyStartHint": "Pick a date in the week it should first ring. It repeats every other week from there.",
+  "nextOccurrenceLabel": "Next: {when}",
+  "@nextOccurrenceLabel": {
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "nextOccurrenceUnknown": "Pick at least one day",
   "soundSectionTitle": "Sound",
   "vibrationLabel": "Vibration",
   "snoozeDurationLabel": "Snooze duration",
@@ -93,6 +100,12 @@
   "permissionGranted": "Granted",
   "permissionNotGranted": "Not granted",
   "openSettings": "Open settings",
+
+  "settingsTestSection": "Test",
+  "testAlarmTitle": "Test alarm",
+  "testAlarmDescription": "Rings in 5 seconds, exactly like a real alarm — useful to check it breaks through silent mode / Do Not Disturb on this device.",
+  "testAlarmButton": "Ring now",
+  "testAlarmScheduledMessage": "Test alarm will ring in 5 seconds",
 
   "settingsAboutSection": "About",
   "settingsIosCriticalAlertsNote": "On iOS, ringing through the mute switch and Do Not Disturb requires Apple's Critical Alerts permission, which Apple grants per app on request. Without it, alarms use Time Sensitive notifications instead."

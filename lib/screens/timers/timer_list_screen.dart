@@ -43,6 +43,7 @@ class TimerListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'timerListFab',
         onPressed: () => _showAddTimerDialog(context, ref),
         tooltip: l10n.addTimer,
         child: const Icon(Icons.add),

@@ -32,6 +32,7 @@ class AlarmListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'alarmListFab',
         onPressed: () => _openEditor(context, ref, null),
         tooltip: l10n.addAlarm,
         child: const Icon(Icons.add),
@@ -88,6 +89,7 @@ class _AlarmTile extends ConsumerWidget {
       repeatSummary(l10n, alarm.repeat),
       if (alarm.label.isNotEmpty) alarm.label,
     ];
+    final next = alarm.enabled ? alarm.nextOccurrence(DateTime.now()) : null;
 
     return ListTile(
       onTap: () => AlarmListScreen._openEditor(context, ref, alarm),
@@ -99,7 +101,20 @@ class _AlarmTile extends ConsumerWidget {
                   : Theme.of(context).colorScheme.outline,
             ),
       ),
-      subtitle: Text(subtitleParts.join(' • ')),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(subtitleParts.join(' • ')),
+          if (next != null)
+            Text(
+              formatNextOccurrence(context, l10n, next),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+        ],
+      ),
       trailing: Switch(
         value: alarm.enabled,
         onChanged: (value) =>

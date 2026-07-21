@@ -2,6 +2,7 @@ import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 import 'package:alarm_app/providers/providers.dart';
+import 'package:alarm_app/widgets/format_helpers.dart';
 import 'package:alarm_app/widgets/weekday_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,6 +66,20 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     final picked = await showTimePicker(context: context, initialTime: _time);
     if (picked != null) setState(() => _time = picked);
   }
+
+  Future<void> _pickBiweeklyAnchor() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _biweeklyAnchor ?? now,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _biweeklyAnchor = picked);
+  }
+
+  DateTime? _nextOccurrence() =>
+      _buildRepeatRule().nextOccurrence(DateTime.now(), hour: _time.hour, minute: _time.minute);
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
@@ -150,6 +165,32 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
               ),
             ),
           ),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    formatNextOccurrence(context, l10n, _nextOccurrence()),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _labelController,
@@ -184,6 +225,19 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             WeekdayPicker(
               selected: _weekdays,
               onChanged: (value) => setState(() => _weekdays = value),
+            ),
+          ],
+          if (_repeatType == RepeatType.biweekly) ...[
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.repeatBiweeklyStartLabel),
+              subtitle: Text(l10n.repeatBiweeklyStartHint),
+              isThreeLine: true,
+              trailing: TextButton(
+                onPressed: _pickBiweeklyAnchor,
+                child: Text(formatDate(context, _biweeklyAnchor ?? DateTime.now())),
+              ),
             ),
           ],
           const SizedBox(height: 24),

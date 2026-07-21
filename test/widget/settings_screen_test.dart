@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../fakes/fake_alarm_scheduler_service.dart';
 import '../fakes/fake_permission_service.dart';
 import '../test_utils.dart';
 
@@ -81,5 +82,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fakePermissions.requestCallCount, 1);
+  });
+
+  testWidgets('tapping "Ring now" schedules a real test alarm and confirms it', (tester) async {
+    final fakeScheduler = FakeAlarmSchedulerService();
+    await pumpApp(
+      tester,
+      const SettingsScreen(),
+      overrides: [
+        schedulerServiceProvider.overrideWithValue(fakeScheduler),
+      ],
+    );
+
+    await tester.tap(find.text('Ring now'));
+    await tester.pumpAndSettle();
+
+    expect(fakeScheduler.testAlarmScheduledCount, 1);
+    expect(find.text('Test alarm will ring in 5 seconds'), findsOneWidget);
   });
 }

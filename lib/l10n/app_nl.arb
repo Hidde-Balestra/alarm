@@ -20,6 +20,10 @@
   "repeatDaily": "Elke dag",
   "repeatWeekly": "Wekelijks op geselecteerde dagen",
   "repeatBiweekly": "Om de week",
+  "repeatBiweeklyStartLabel": "Beginweek",
+  "repeatBiweeklyStartHint": "Kies een datum in de week waarin de wekker voor het eerst moet afgaan. Vanaf daar herhaalt hij om de week.",
+  "nextOccurrenceLabel": "Volgende keer: {when}",
+  "nextOccurrenceUnknown": "Kies minstens één dag",
   "soundSectionTitle": "Geluid",
   "vibrationLabel": "Trillen",
   "snoozeDurationLabel": "Sluimerduur",
@@ -81,6 +85,12 @@
   "permissionGranted": "Toegestaan",
   "permissionNotGranted": "Niet toegestaan",
   "openSettings": "Instellingen openen",
+
+  "settingsTestSection": "Test",
+  "testAlarmTitle": "Testwekker",
+  "testAlarmDescription": "Gaat over 5 seconden af, precies als een echte wekker — handig om te checken of hij op dit toestel door de stille stand / Niet storen heen komt.",
+  "testAlarmButton": "Nu afspelen",
+  "testAlarmScheduledMessage": "Testwekker gaat over 5 seconden af",
 
   "settingsAboutSection": "Over",
   "settingsIosCriticalAlertsNote": "Op iOS is voor het afgaan door de mute-schakelaar en Niet storen heen de Apple Critical Alerts-toestemming nodig, die Apple per app op aanvraag toekent. Zonder die toestemming gebruiken wekkers in plaats daarvan tijdgevoelige meldingen."

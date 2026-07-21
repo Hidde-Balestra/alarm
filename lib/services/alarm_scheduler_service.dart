@@ -116,6 +116,43 @@ class AlarmSchedulerService {
   Future<void> cancelAlarm(String alarmId) =>
       plugin.Alarm.stop(_numericId(RingingKind.alarm, alarmId));
 
+  /// Fixed id for the Settings screen's "ring now" test alarm, so repeated
+  /// taps simply reschedule the same one instead of piling up new ids.
+  static const testAlarmId = 'test-alarm';
+
+  /// Rings a real OS-level alarm after [delay], bypassing the repeat-rule
+  /// machinery entirely. Lets a user verify on their own device that alarms
+  /// actually break through silent mode / Do Not Disturb, without waiting
+  /// for a real scheduled time.
+  Future<void> scheduleTestAlarm({
+    required Duration delay,
+    required String notificationTitle,
+    required String notificationBody,
+    required String stopButtonLabel,
+  }) async {
+    await plugin.Alarm.set(
+      alarmSettings: plugin.AlarmSettings(
+        id: _numericId(RingingKind.alarm, testAlarmId),
+        dateTime: DateTime.now().add(delay),
+        assetAudioPath: 'assets/sounds/alarm_beep.wav',
+        loopAudio: true,
+        vibrate: true,
+        androidFullScreenIntent: true,
+        warningNotificationOnKill: true,
+        volumeSettings: const plugin.VolumeSettings.fixed(
+          volume: 1,
+          volumeEnforced: true,
+        ),
+        notificationSettings: plugin.NotificationSettings(
+          title: notificationTitle,
+          body: notificationBody,
+          stopButton: stopButtonLabel,
+        ),
+        payload: RingingRef(RingingKind.alarm, testAlarmId).encode(),
+      ),
+    );
+  }
+
   /// Schedules a one-shot timer alarm at [end].
   Future<void> scheduleTimer(
     String timerId,
