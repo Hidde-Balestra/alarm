@@ -1,0 +1,99 @@
+{
+  "@@locale": "en",
+  "appTitle": "Alarm",
+  "@appTitle": {"description": "The application name"},
+
+  "navAlarms": "Alarms",
+  "navTimer": "Timer",
+  "navSettings": "Settings",
+
+  "alarmsEmptyTitle": "No alarms yet",
+  "alarmsEmptySubtitle": "Tap + to create your first alarm",
+  "addAlarm": "Add alarm",
+  "nextAlarmIn": "Next alarm in {duration}",
+  "@nextAlarmIn": {
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "alarmDisabled": "Off",
+
+  "editAlarmTitle": "Edit alarm",
+  "newAlarmTitle": "New alarm",
+  "labelFieldHint": "Label (optional)",
+  "repeatSectionTitle": "Repeat",
+  "repeatNever": "Never",
+  "repeatDaily": "Every day",
+  "repeatWeekly": "Weekly on selected days",
+  "repeatBiweekly": "Every other week",
+  "soundSectionTitle": "Sound",
+  "vibrationLabel": "Vibration",
+  "snoozeDurationLabel": "Snooze duration",
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "deleteAlarmConfirm": "Delete this alarm?",
+
+  "weekdayMonShort": "Mo",
+  "weekdayTueShort": "Tu",
+  "weekdayWedShort": "We",
+  "weekdayThuShort": "Th",
+  "weekdayFriShort": "Fr",
+  "weekdaySatShort": "Sa",
+  "weekdaySunShort": "Su",
+
+  "alarmRingingTitle": "Alarm",
+  "timerFinishedTitle": "Timer finished",
+  "dismiss": "Dismiss",
+  "snooze": "Snooze",
+  "snoozedFor": "Snoozed for {minutes} min",
+  "@snoozedFor": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+
+  "timerEmptyTitle": "No timers running",
+  "addTimer": "Add timer",
+  "timerLabelHint": "Timer label (optional)",
+  "hoursShort": "h",
+  "minutesUnitShort": "m",
+  "secondsShort": "s",
+  "start": "Start",
+  "pause": "Pause",
+  "resume": "Resume",
+  "reset": "Reset",
+  "timerRemaining": "{time} remaining",
+  "@timerRemaining": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+
+  "settingsThemeSection": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "settingsLanguageSection": "Language",
+  "languageSystem": "System",
+  "languageDutch": "Nederlands",
+  "languageEnglish": "English",
+  "settingsDefaultsSection": "Alarm defaults",
+  "settingsDefaultSnooze": "Default snooze duration",
+  "settingsDefaultVibration": "Vibrate by default",
+
+  "settingsPermissionsSection": "Reliability",
+  "settingsPermissionsSubtitle": "So your alarm doesn't get silenced or killed by the system",
+  "permissionDndTitle": "Do Not Disturb access",
+  "permissionDndDescription": "Lets this app ring through Do Not Disturb mode.",
+  "permissionExactAlarmTitle": "Exact alarms",
+  "permissionExactAlarmDescription": "Required so alarms ring at the exact set time.",
+  "permissionNotificationTitle": "Notifications",
+  "permissionNotificationDescription": "Required to show the alarm and timer alerts.",
+  "permissionBatteryTitle": "Disable battery optimization",
+  "permissionBatteryDescription": "Prevents the system from stopping the app in the background so alarms keep working.",
+  "permissionGranted": "Granted",
+  "permissionNotGranted": "Not granted",
+  "openSettings": "Open settings",
+
+  "settingsAboutSection": "About",
+  "settingsIosCriticalAlertsNote": "On iOS, ringing through the mute switch and Do Not Disturb requires Apple's Critical Alerts permission, which Apple grants per app on request. Without it, alarms use Time Sensitive notifications instead."
+}
