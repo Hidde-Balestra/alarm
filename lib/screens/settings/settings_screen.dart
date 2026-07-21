@@ -154,6 +154,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             granted: _permissionStatus[ReliabilityPermission.batteryOptimization] ?? false,
             onRefresh: _refreshPermissions,
           ),
+          _PermissionTile(
+            title: l10n.permissionFullScreenTitle,
+            description: l10n.permissionFullScreenDescription,
+            permission: ReliabilityPermission.fullScreenAlarm,
+            granted: _permissionStatus[ReliabilityPermission.fullScreenAlarm] ?? false,
+            onRefresh: _refreshPermissions,
+          ),
           const Divider(),
           _SectionHeader(title: l10n.settingsTestSection),
           ListTile(

@@ -97,6 +97,8 @@
   "permissionNotificationDescription": "Required to show the alarm and timer alerts.",
   "permissionBatteryTitle": "Disable battery optimization",
   "permissionBatteryDescription": "Prevents the system from stopping the app in the background so alarms keep working.",
+  "permissionFullScreenTitle": "Full-screen alarm",
+  "permissionFullScreenDescription": "Lets the alarm take over the screen when it rings, even over the lock screen, instead of just showing a notification.",
   "permissionGranted": "Granted",
   "permissionNotGranted": "Not granted",
   "openSettings": "Open settings",

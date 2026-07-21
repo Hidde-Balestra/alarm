@@ -100,4 +100,10 @@ void main() {
     expect(fakeScheduler.testAlarmScheduledCount, 1);
     expect(find.text('Test alarm will ring in 5 seconds'), findsOneWidget);
   });
+
+  testWidgets('shows a reliability tile for the full-screen alarm permission', (tester) async {
+    await pumpApp(tester, const SettingsScreen());
+
+    expect(find.text('Full-screen alarm'), findsOneWidget);
+  });
 }

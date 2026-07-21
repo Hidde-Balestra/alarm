@@ -82,6 +82,8 @@
   "permissionNotificationDescription": "Nodig om de wekker- en timermeldingen te tonen.",
   "permissionBatteryTitle": "Batterijoptimalisatie uitschakelen",
   "permissionBatteryDescription": "Voorkomt dat het systeem de app op de achtergrond stopt, zodat wekkers blijven werken.",
+  "permissionFullScreenTitle": "Wekker op volledig scherm",
+  "permissionFullScreenDescription": "Laat de wekker het scherm overnemen als hij afgaat, ook over het vergrendelscherm heen, in plaats van alleen een melding te tonen.",
   "permissionGranted": "Toegestaan",
   "permissionNotGranted": "Niet toegestaan",
   "openSettings": "Instellingen openen",
