@@ -1,5 +1,8 @@
+import 'package:alarm_app/models/app_sound.dart';
+import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/alarms/alarm_edit_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test_utils.dart';
@@ -78,5 +81,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining(_monthAbbreviations[nextMonth.month - 1]), findsWidgets);
+  });
+
+  testWidgets('choosing a different sound saves it on the alarm', (tester) async {
+    late ProviderContainer container;
+    await pumpApp(
+      tester,
+      Consumer(
+        builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const AlarmEditScreen();
+        },
+      ),
+    );
+
+    expect(find.text('Classic'), findsOneWidget);
+
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Digital').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Digital'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    final alarms = container.read(alarmsProvider).valueOrNull ?? [];
+    expect(alarms.single.sound, AppSound.digital);
   });
 }

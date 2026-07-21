@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:alarm/alarm.dart' as plugin;
 import 'package:alarm/utils/alarm_set.dart' as plugin;
 import 'package:alarm_app/models/alarm.dart' as model;
+import 'package:alarm_app/models/app_sound.dart';
 
 /// What kind of ringing entity an [plugin.AlarmSettings.payload] refers to.
 enum RingingKind { alarm, timer }
@@ -63,7 +64,7 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.alarm, alarm.id),
         dateTime: next,
-        assetAudioPath: 'assets/sounds/alarm_beep.wav',
+        assetAudioPath: alarm.sound.assetPath,
         loopAudio: true,
         vibrate: alarm.vibrate,
         androidFullScreenIntent: true,
@@ -94,7 +95,7 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.alarm, alarm.id),
         dateTime: DateTime.now().add(Duration(minutes: alarm.snoozeMinutes)),
-        assetAudioPath: 'assets/sounds/alarm_beep.wav',
+        assetAudioPath: alarm.sound.assetPath,
         loopAudio: true,
         vibrate: alarm.vibrate,
         androidFullScreenIntent: true,
@@ -134,7 +135,7 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.alarm, testAlarmId),
         dateTime: DateTime.now().add(delay),
-        assetAudioPath: 'assets/sounds/alarm_beep.wav',
+        assetAudioPath: AppSound.classic.assetPath,
         loopAudio: true,
         vibrate: true,
         androidFullScreenIntent: true,
@@ -157,6 +158,7 @@ class AlarmSchedulerService {
   Future<void> scheduleTimer(
     String timerId,
     DateTime end, {
+    required AppSound sound,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -165,7 +167,7 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.timer, timerId),
         dateTime: end,
-        assetAudioPath: 'assets/sounds/timer_beep.wav',
+        assetAudioPath: sound.assetPath,
         loopAudio: true,
         vibrate: true,
         androidFullScreenIntent: true,

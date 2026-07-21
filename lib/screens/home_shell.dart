@@ -1,10 +1,11 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/screens/alarms/alarm_list_screen.dart';
 import 'package:alarm_app/screens/settings/settings_screen.dart';
+import 'package:alarm_app/screens/stopwatch/stopwatch_screen.dart';
 import 'package:alarm_app/screens/timers/timer_list_screen.dart';
 import 'package:flutter/material.dart';
 
-/// Bottom-navigation shell with the three main sections of the app.
+/// Bottom-navigation shell with the main sections of the app.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -21,6 +22,7 @@ class _HomeShellState extends State<HomeShell> {
     final screens = const [
       AlarmListScreen(),
       TimerListScreen(),
+      StopwatchScreen(),
       SettingsScreen(),
     ];
 
@@ -32,6 +34,7 @@ class _HomeShellState extends State<HomeShell> {
         destinations: [
           NavigationDestination(icon: const Icon(Icons.alarm), label: l10n.navAlarms),
           NavigationDestination(icon: const Icon(Icons.timer_outlined), label: l10n.navTimer),
+          NavigationDestination(icon: const Icon(Icons.timer_10_outlined), label: l10n.navStopwatch),
           NavigationDestination(icon: const Icon(Icons.settings_outlined), label: l10n.navSettings),
         ],
       ),

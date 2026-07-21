@@ -4,6 +4,7 @@
 
   "navAlarms": "Wekkers",
   "navTimer": "Timer",
+  "navStopwatch": "Stopwatch",
   "navSettings": "Instellingen",
 
   "alarmsEmptyTitle": "Nog geen wekkers",
@@ -25,6 +26,10 @@
   "nextOccurrenceLabel": "Volgende keer: {when}",
   "nextOccurrenceUnknown": "Kies minstens één dag",
   "soundSectionTitle": "Geluid",
+  "soundClassic": "Klassiek",
+  "soundDigital": "Digitaal",
+  "soundGentle": "Zacht",
+  "soundSiren": "Sirene",
   "vibrationLabel": "Trillen",
   "snoozeDurationLabel": "Sluimerduur",
   "minutesShort": "{minutes} min",
@@ -60,6 +65,10 @@
   "reset": "Reset",
   "timerRemaining": "{time} resterend",
 
+  "stopwatchEmptyTitle": "Klaar voor de start",
+  "stopwatchLap": "Ronde",
+  "stopwatchLapNumber": "Ronde {number}",
+
   "settingsThemeSection": "Weergave",
   "themeSystem": "Systeem",
   "themeLight": "Licht",
@@ -71,6 +80,8 @@
   "settingsDefaultsSection": "Standaardinstellingen wekker",
   "settingsDefaultSnooze": "Standaard sluimerduur",
   "settingsDefaultVibration": "Standaard trillen",
+  "settingsDefaultAlarmSound": "Standaard wekkergeluid",
+  "settingsDefaultTimerSound": "Standaard timergeluid",
 
   "settingsPermissionsSection": "Betrouwbaarheid",
   "settingsPermissionsSubtitle": "Zodat je wekker niet gedempt of afgesloten wordt door het systeem",
@@ -95,5 +106,14 @@
   "testAlarmScheduledMessage": "Testwekker gaat over 5 seconden af",
 
   "settingsAboutSection": "Over",
-  "settingsIosCriticalAlertsNote": "Op iOS is voor het afgaan door de mute-schakelaar en Niet storen heen de Apple Critical Alerts-toestemming nodig, die Apple per app op aanvraag toekent. Zonder die toestemming gebruiken wekkers in plaats daarvan tijdgevoelige meldingen."
+  "settingsIosCriticalAlertsNote": "Op iOS is voor het afgaan door de mute-schakelaar en Niet storen heen de Apple Critical Alerts-toestemming nodig, die Apple per app op aanvraag toekent. Zonder die toestemming gebruiken wekkers in plaats daarvan tijdgevoelige meldingen.",
+
+  "settingsUpdatesSection": "Updates",
+  "currentVersionLabel": "Huidige versie: {version}",
+  "updateCheckingLabel": "Controleren op updates…",
+  "updateUpToDateLabel": "Je hebt de nieuwste versie",
+  "updateAvailableLabel": "Update beschikbaar: {version}",
+  "updateCheckFailedLabel": "Kon niet controleren op updates",
+  "updateViewReleaseButton": "Bekijk release",
+  "updateCheckNowButton": "Nu controleren"
 }

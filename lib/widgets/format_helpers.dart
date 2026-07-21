@@ -73,3 +73,24 @@ String formatTimerClock(Duration duration) {
     ..write(seconds.toString().padLeft(2, '0'));
   return buffer.toString();
 }
+
+/// "12:03.4" (mm:ss.d) style, or "1:12:03.4" (h:mm:ss.d) past an hour —
+/// stopwatches conventionally show tenths of a second.
+String formatStopwatchClock(Duration duration) {
+  final d = duration.isNegative ? Duration.zero : duration;
+  final hours = d.inHours;
+  final minutes = d.inMinutes.remainder(60);
+  final seconds = d.inSeconds.remainder(60);
+  final tenths = (d.inMilliseconds.remainder(1000) / 100).floor();
+  final buffer = StringBuffer();
+  if (hours > 0) {
+    buffer.write('$hours:${minutes.toString().padLeft(2, '0')}:');
+  } else {
+    buffer.write('${minutes.toString().padLeft(2, '0')}:');
+  }
+  buffer
+    ..write(seconds.toString().padLeft(2, '0'))
+    ..write('.')
+    ..write(tenths);
+  return buffer.toString();
+}

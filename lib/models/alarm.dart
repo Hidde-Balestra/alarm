@@ -1,3 +1,4 @@
+import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 
 /// A user-configured alarm. Time-of-day plus a [RepeatRule] describing when
@@ -12,6 +13,7 @@ class Alarm {
   final RepeatRule repeat;
   final bool vibrate;
   final int snoozeMinutes;
+  final AppSound sound;
 
   const Alarm({
     required this.id,
@@ -22,6 +24,7 @@ class Alarm {
     this.repeat = const RepeatRule.none(),
     this.vibrate = true,
     this.snoozeMinutes = 9,
+    this.sound = AppSound.classic,
   });
 
   DateTime? nextOccurrence(DateTime from) =>
@@ -36,6 +39,7 @@ class Alarm {
     RepeatRule? repeat,
     bool? vibrate,
     int? snoozeMinutes,
+    AppSound? sound,
   }) {
     return Alarm(
       id: id ?? this.id,
@@ -46,6 +50,7 @@ class Alarm {
       repeat: repeat ?? this.repeat,
       vibrate: vibrate ?? this.vibrate,
       snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
+      sound: sound ?? this.sound,
     );
   }
 
@@ -58,6 +63,7 @@ class Alarm {
         'repeat': repeat.toJson(),
         'vibrate': vibrate,
         'snoozeMinutes': snoozeMinutes,
+        'sound': sound.name,
       };
 
   factory Alarm.fromJson(Map<String, dynamic> json) => Alarm(
@@ -71,6 +77,7 @@ class Alarm {
             : const RepeatRule.none(),
         vibrate: json['vibrate'] as bool? ?? true,
         snoozeMinutes: json['snoozeMinutes'] as int? ?? 9,
+        sound: AppSound.values.byName(json['sound'] as String? ?? 'classic'),
       );
 
   @override
@@ -83,9 +90,10 @@ class Alarm {
       other.enabled == enabled &&
       other.repeat == repeat &&
       other.vibrate == vibrate &&
-      other.snoozeMinutes == snoozeMinutes;
+      other.snoozeMinutes == snoozeMinutes &&
+      other.sound == sound;
 
   @override
   int get hashCode =>
-      Object.hash(id, hour, minute, label, enabled, repeat, vibrate, snoozeMinutes);
+      Object.hash(id, hour, minute, label, enabled, repeat, vibrate, snoozeMinutes, sound);
 }

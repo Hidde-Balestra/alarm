@@ -1,8 +1,10 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/alarm.dart';
+import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/widgets/format_helpers.dart';
+import 'package:alarm_app/widgets/sound_picker.dart';
 import 'package:alarm_app/widgets/weekday_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +28,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
   DateTime? _biweeklyAnchor;
   late bool _vibrate;
   late int _snoozeMinutes;
+  late AppSound _sound;
 
   bool get _isNew => widget.alarm == null;
 
@@ -41,6 +44,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     _biweeklyAnchor = alarm?.repeat.anchorDate;
     _vibrate = alarm?.vibrate ?? defaults?.defaultVibrate ?? true;
     _snoozeMinutes = alarm?.snoozeMinutes ?? defaults?.defaultSnoozeMinutes ?? 9;
+    _sound = alarm?.sound ?? defaults?.defaultAlarmSound ?? AppSound.classic;
   }
 
   @override
@@ -101,6 +105,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       repeat: _buildRepeatRule(),
       vibrate: _vibrate,
       snoozeMinutes: _snoozeMinutes,
+      sound: _sound,
     );
     await notifier.upsert(alarm);
     if (mounted) Navigator.of(context).pop();
@@ -241,6 +246,14 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             ),
           ],
           const SizedBox(height: 24),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.soundSectionTitle),
+            trailing: SoundPicker(
+              value: _sound,
+              onChanged: (value) => setState(() => _sound = value),
+            ),
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.vibrationLabel),

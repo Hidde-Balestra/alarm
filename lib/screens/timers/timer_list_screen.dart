@@ -1,7 +1,9 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
+import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/widgets/format_helpers.dart';
+import 'package:alarm_app/widgets/sound_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,8 +59,9 @@ class TimerListScreen extends ConsumerWidget {
     int hours = 0;
     int minutes = 5;
     int seconds = 0;
+    var sound = ref.read(settingsProvider).valueOrNull?.defaultTimerSound ?? AppSound.digital;
 
-    final duration = await showDialog<Duration>(
+    final result = await showDialog<({Duration duration, AppSound sound})>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
@@ -94,6 +97,17 @@ class TimerListScreen extends ConsumerWidget {
                 controller: labelController,
                 decoration: InputDecoration(labelText: l10n.timerLabelHint),
               ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(l10n.soundSectionTitle),
+                  SoundPicker(
+                    value: sound,
+                    onChanged: (value) => setState(() => sound = value),
+                  ),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -104,9 +118,10 @@ class TimerListScreen extends ConsumerWidget {
             FilledButton(
               onPressed: (hours == 0 && minutes == 0 && seconds == 0)
                   ? null
-                  : () => Navigator.of(context).pop(
-                        Duration(hours: hours, minutes: minutes, seconds: seconds),
-                      ),
+                  : () => Navigator.of(context).pop((
+                        duration: Duration(hours: hours, minutes: minutes, seconds: seconds),
+                        sound: sound,
+                      )),
               child: Text(l10n.start),
             ),
           ],
@@ -114,12 +129,13 @@ class TimerListScreen extends ConsumerWidget {
       ),
     );
 
-    if (duration == null || !context.mounted) return;
+    if (result == null || !context.mounted) return;
     final notifier = ref.read(timersProvider.notifier);
     await notifier.start(
       id: notifier.newTimerId(),
-      duration: duration,
+      duration: result.duration,
       label: labelController.text.trim(),
+      sound: result.sound,
       notificationTitle: l10n.timerFinishedTitle,
       notificationBody: labelController.text.trim().isEmpty
           ? l10n.timerFinishedTitle

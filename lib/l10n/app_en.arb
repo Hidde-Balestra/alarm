@@ -5,6 +5,7 @@
 
   "navAlarms": "Alarms",
   "navTimer": "Timer",
+  "navStopwatch": "Stopwatch",
   "navSettings": "Settings",
 
   "alarmsEmptyTitle": "No alarms yet",
@@ -32,6 +33,10 @@
   },
   "nextOccurrenceUnknown": "Pick at least one day",
   "soundSectionTitle": "Sound",
+  "soundClassic": "Classic",
+  "soundDigital": "Digital",
+  "soundGentle": "Gentle",
+  "soundSiren": "Siren",
   "vibrationLabel": "Vibration",
   "snoozeDurationLabel": "Snooze duration",
   "minutesShort": "{minutes} min",
@@ -75,6 +80,13 @@
     "placeholders": {"time": {"type": "String"}}
   },
 
+  "stopwatchEmptyTitle": "Ready when you are",
+  "stopwatchLap": "Lap",
+  "stopwatchLapNumber": "Lap {number}",
+  "@stopwatchLapNumber": {
+    "placeholders": {"number": {"type": "int"}}
+  },
+
   "settingsThemeSection": "Appearance",
   "themeSystem": "System",
   "themeLight": "Light",
@@ -86,6 +98,8 @@
   "settingsDefaultsSection": "Alarm defaults",
   "settingsDefaultSnooze": "Default snooze duration",
   "settingsDefaultVibration": "Vibrate by default",
+  "settingsDefaultAlarmSound": "Default alarm sound",
+  "settingsDefaultTimerSound": "Default timer sound",
 
   "settingsPermissionsSection": "Reliability",
   "settingsPermissionsSubtitle": "So your alarm doesn't get silenced or killed by the system",
@@ -110,5 +124,20 @@
   "testAlarmScheduledMessage": "Test alarm will ring in 5 seconds",
 
   "settingsAboutSection": "About",
-  "settingsIosCriticalAlertsNote": "On iOS, ringing through the mute switch and Do Not Disturb requires Apple's Critical Alerts permission, which Apple grants per app on request. Without it, alarms use Time Sensitive notifications instead."
+  "settingsIosCriticalAlertsNote": "On iOS, ringing through the mute switch and Do Not Disturb requires Apple's Critical Alerts permission, which Apple grants per app on request. Without it, alarms use Time Sensitive notifications instead.",
+
+  "settingsUpdatesSection": "Updates",
+  "currentVersionLabel": "Current version: {version}",
+  "@currentVersionLabel": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "updateCheckingLabel": "Checking for updates…",
+  "updateUpToDateLabel": "You're on the latest version",
+  "updateAvailableLabel": "Update available: {version}",
+  "@updateAvailableLabel": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "updateCheckFailedLabel": "Couldn't check for updates",
+  "updateViewReleaseButton": "View release",
+  "updateCheckNowButton": "Check now"
 }

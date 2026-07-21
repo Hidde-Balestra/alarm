@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/services/permission_service.dart';
+import 'package:alarm_app/services/update_service.dart';
+import 'package:alarm_app/widgets/sound_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -124,6 +129,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             value: settings.defaultVibrate,
             onChanged: notifier.setDefaultVibrate,
           ),
+          ListTile(
+            title: Text(l10n.settingsDefaultAlarmSound),
+            trailing: SoundPicker(
+              value: settings.defaultAlarmSound,
+              onChanged: notifier.setDefaultAlarmSound,
+            ),
+          ),
+          ListTile(
+            title: Text(l10n.settingsDefaultTimerSound),
+            trailing: SoundPicker(
+              value: settings.defaultTimerSound,
+              onChanged: notifier.setDefaultTimerSound,
+            ),
+          ),
           const Divider(),
           _SectionHeader(title: l10n.settingsPermissionsSection, subtitle: l10n.settingsPermissionsSubtitle),
           _PermissionTile(
@@ -181,9 +200,99 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          const Divider(),
+          _SectionHeader(title: l10n.settingsUpdatesSection),
+          const _UpdatesSection(),
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+class _UpdatesSection extends ConsumerStatefulWidget {
+  const _UpdatesSection();
+
+  @override
+  ConsumerState<_UpdatesSection> createState() => _UpdatesSectionState();
+}
+
+class _UpdatesSectionState extends ConsumerState<_UpdatesSection> {
+  String? _currentVersion;
+  UpdateCheckResult? _result;
+  // Starts true as the initial field value (not via setState) since
+  // calling setState synchronously from initState is not allowed — it
+  // still runs during the build phase.
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_check());
+  }
+
+  Future<void> _check() async {
+    if (!_checking) setState(() => _checking = true);
+    final info = await PackageInfo.fromPlatform();
+    final result = await ref.read(updateServiceProvider).checkForUpdate(info.version);
+    if (!mounted) return;
+    setState(() {
+      _currentVersion = info.version;
+      _result = result;
+      _checking = false;
+    });
+  }
+
+  String _statusText(AppLocalizations l10n) {
+    if (_checking) return l10n.updateCheckingLabel;
+    switch (_result?.status) {
+      case UpdateStatus.updateAvailable:
+        return l10n.updateAvailableLabel(_result!.latestVersion ?? '');
+      case UpdateStatus.upToDate:
+        return l10n.updateUpToDateLabel;
+      case UpdateStatus.checkFailed:
+      case null:
+        return l10n.updateCheckFailedLabel;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final releaseUrl = _result?.releaseUrl;
+    final showViewRelease = _result?.status == UpdateStatus.updateAvailable && releaseUrl != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_currentVersion != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.currentVersionLabel(_currentVersion!),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ListTile(
+          title: Text(_statusText(l10n)),
+          trailing: _checking
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : showViewRelease
+                  ? FilledButton(
+                      onPressed: () =>
+                          ref.read(updateServiceProvider).openReleasePage(releaseUrl),
+                      child: Text(l10n.updateViewReleaseButton),
+                    )
+                  : TextButton(
+                      onPressed: _check,
+                      child: Text(l10n.updateCheckNowButton),
+                    ),
+        ),
+      ],
     );
   }
 }
