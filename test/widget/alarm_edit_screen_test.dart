@@ -1,4 +1,3 @@
-import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/alarms/alarm_edit_screen.dart';
 import 'package:flutter/material.dart';
@@ -108,6 +107,6 @@ void main() {
     await tester.pumpAndSettle();
 
     final alarms = container.read(alarmsProvider).valueOrNull ?? [];
-    expect(alarms.single.sound, AppSound.digital);
+    expect(alarms.single.soundId, 'digital');
   });
 }

@@ -1,5 +1,6 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/alarm.dart';
+import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:flutter/material.dart';
@@ -92,9 +93,11 @@ class RingingScreen extends ConsumerWidget {
       final alarm = _findAlarm(ref.read(alarmsProvider).valueOrNull ?? const [], ringingRef.refId);
       if (alarm != null) {
         if (alarm.repeat.repeats) {
+          final customSounds = ref.read(customSoundsProvider).valueOrNull ?? const [];
           await scheduler.scheduleNext(
             alarm,
             from: DateTime.now(),
+            soundAssetPath: resolveSoundAssetPath(alarm.soundId, customSounds),
             notificationTitle: l10n.alarmRingingTitle,
             notificationBody: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
             stopButtonLabel: l10n.dismiss,
@@ -104,8 +107,9 @@ class RingingScreen extends ConsumerWidget {
         }
       }
     } else {
-      await scheduler.cancelTimer(ringingRef.refId);
-      await ref.read(timersProvider.notifier).remove(ringingRef.refId);
+      // Left in the list (paused, full duration) rather than deleted, so the
+      // user can restart or manually remove it — see TimersNotifier.finish.
+      await ref.read(timersProvider.notifier).finish(ringingRef.refId);
     }
 
     if (context.mounted) Navigator.of(context).pop();
@@ -115,8 +119,10 @@ class RingingScreen extends ConsumerWidget {
     final alarm = _findAlarm(ref.read(alarmsProvider).valueOrNull ?? const [], ringingRef.refId);
     if (alarm == null) return;
     final l10n = AppLocalizations.of(context);
+    final customSounds = ref.read(customSoundsProvider).valueOrNull ?? const [];
     await ref.read(schedulerServiceProvider).snooze(
           alarm,
+          soundAssetPath: resolveSoundAssetPath(alarm.soundId, customSounds),
           notificationTitle: l10n.alarmRingingTitle,
           notificationBody: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
           stopButtonLabel: l10n.dismiss,

@@ -2,14 +2,17 @@ import 'dart:convert';
 
 import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_settings.dart';
+import 'package:alarm_app/models/custom_sound.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Persists alarms, timers and settings as JSON in [SharedPreferences].
+/// Persists alarms, timers, settings and custom sounds as JSON in
+/// [SharedPreferences].
 class StorageService {
   static const _alarmsKey = 'alarms';
   static const _settingsKey = 'app_settings';
   static const _timersKey = 'timers';
+  static const _customSoundsKey = 'custom_sounds';
 
   Future<List<Alarm>> loadAlarms() async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,5 +56,21 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(timers.map((t) => t.toJson()).toList());
     await prefs.setString(_timersKey, raw);
+  }
+
+  Future<List<CustomSound>> loadCustomSounds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customSoundsKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => CustomSound.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<void> saveCustomSounds(List<CustomSound> sounds) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(sounds.map((s) => s.toJson()).toList());
+    await prefs.setString(_customSoundsKey, raw);
   }
 }

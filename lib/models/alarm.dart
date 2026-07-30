@@ -1,4 +1,3 @@
-import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 
 /// A user-configured alarm. Time-of-day plus a [RepeatRule] describing when
@@ -13,7 +12,10 @@ class Alarm {
   final RepeatRule repeat;
   final bool vibrate;
   final int snoozeMinutes;
-  final AppSound sound;
+
+  /// Either a bundled [AppSound]'s name (e.g. `'classic'`) or a
+  /// [CustomSound.id] — see `resolveSoundAssetPath`.
+  final String soundId;
 
   const Alarm({
     required this.id,
@@ -24,7 +26,7 @@ class Alarm {
     this.repeat = const RepeatRule.none(),
     this.vibrate = true,
     this.snoozeMinutes = 9,
-    this.sound = AppSound.classic,
+    this.soundId = 'classic',
   });
 
   DateTime? nextOccurrence(DateTime from) =>
@@ -39,7 +41,7 @@ class Alarm {
     RepeatRule? repeat,
     bool? vibrate,
     int? snoozeMinutes,
-    AppSound? sound,
+    String? soundId,
   }) {
     return Alarm(
       id: id ?? this.id,
@@ -50,7 +52,7 @@ class Alarm {
       repeat: repeat ?? this.repeat,
       vibrate: vibrate ?? this.vibrate,
       snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
-      sound: sound ?? this.sound,
+      soundId: soundId ?? this.soundId,
     );
   }
 
@@ -63,7 +65,7 @@ class Alarm {
         'repeat': repeat.toJson(),
         'vibrate': vibrate,
         'snoozeMinutes': snoozeMinutes,
-        'sound': sound.name,
+        'sound': soundId,
       };
 
   factory Alarm.fromJson(Map<String, dynamic> json) => Alarm(
@@ -77,7 +79,7 @@ class Alarm {
             : const RepeatRule.none(),
         vibrate: json['vibrate'] as bool? ?? true,
         snoozeMinutes: json['snoozeMinutes'] as int? ?? 9,
-        sound: AppSound.values.byName(json['sound'] as String? ?? 'classic'),
+        soundId: json['sound'] as String? ?? 'classic',
       );
 
   @override
@@ -91,9 +93,9 @@ class Alarm {
       other.repeat == repeat &&
       other.vibrate == vibrate &&
       other.snoozeMinutes == snoozeMinutes &&
-      other.sound == sound;
+      other.soundId == soundId;
 
   @override
   int get hashCode =>
-      Object.hash(id, hour, minute, label, enabled, repeat, vibrate, snoozeMinutes, sound);
+      Object.hash(id, hour, minute, label, enabled, repeat, vibrate, snoozeMinutes, soundId);
 }

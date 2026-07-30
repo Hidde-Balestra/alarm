@@ -1,6 +1,5 @@
 import 'package:alarm/utils/alarm_set.dart';
 import 'package:alarm_app/models/alarm.dart' as model;
-import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 
 /// Test double that never touches the real `alarm` plugin (which needs
@@ -22,6 +21,7 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
   Future<void> scheduleNext(
     model.Alarm alarm, {
     required DateTime from,
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -37,6 +37,7 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
   @override
   Future<void> snooze(
     model.Alarm alarm, {
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -53,7 +54,7 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
   Future<void> scheduleTimer(
     String timerId,
     DateTime end, {
-    required AppSound sound,
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,

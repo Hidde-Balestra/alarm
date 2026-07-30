@@ -1,11 +1,12 @@
-import 'package:alarm_app/models/app_sound.dart';
-
 /// A running or paused countdown timer.
 class TimerSession {
   final String id;
   final String label;
   final Duration totalDuration;
-  final AppSound sound;
+
+  /// Either a bundled `AppSound`'s name (e.g. `'digital'`) or a
+  /// `CustomSound.id` — see `resolveSoundAssetPath`.
+  final String soundId;
 
   /// Absolute end time while running. Null while paused.
   final DateTime? endAt;
@@ -18,7 +19,7 @@ class TimerSession {
     required this.id,
     required this.totalDuration,
     this.label = '',
-    this.sound = AppSound.digital,
+    this.soundId = 'digital',
     this.endAt,
     this.remainingWhenPaused = Duration.zero,
     this.paused = false,
@@ -28,13 +29,13 @@ class TimerSession {
     required String id,
     required Duration duration,
     String label = '',
-    AppSound sound = AppSound.digital,
+    String soundId = 'digital',
   }) {
     return TimerSession(
       id: id,
       label: label,
       totalDuration: duration,
-      sound: sound,
+      soundId: soundId,
       endAt: DateTime.now().add(duration),
     );
   }
@@ -53,7 +54,7 @@ class TimerSession {
         id: id,
         label: label,
         totalDuration: totalDuration,
-        sound: sound,
+        soundId: soundId,
         paused: true,
         remainingWhenPaused: remaining(now),
       );
@@ -62,7 +63,7 @@ class TimerSession {
         id: id,
         label: label,
         totalDuration: totalDuration,
-        sound: sound,
+        soundId: soundId,
         paused: false,
         endAt: DateTime.now().add(remainingWhenPaused),
       );
@@ -71,15 +72,28 @@ class TimerSession {
         id: id,
         label: label,
         totalDuration: totalDuration,
-        sound: sound,
+        soundId: soundId,
         endAt: DateTime.now().add(totalDuration),
+      );
+
+  /// State to fall back to once the timer has rung and been dismissed:
+  /// paused at its full original duration, ready for the user to either
+  /// restart it (play button) or delete it (trash button) — rather than
+  /// disappearing from the list on its own.
+  TimerSession readyToRestart() => TimerSession(
+        id: id,
+        label: label,
+        totalDuration: totalDuration,
+        soundId: soundId,
+        paused: true,
+        remainingWhenPaused: totalDuration,
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
         'totalDurationMs': totalDuration.inMilliseconds,
-        'sound': sound.name,
+        'sound': soundId,
         'endAt': endAt?.toIso8601String(),
         'remainingWhenPausedMs': remainingWhenPaused.inMilliseconds,
         'paused': paused,
@@ -89,7 +103,7 @@ class TimerSession {
         id: json['id'] as String,
         label: json['label'] as String? ?? '',
         totalDuration: Duration(milliseconds: json['totalDurationMs'] as int),
-        sound: AppSound.values.byName(json['sound'] as String? ?? 'digital'),
+        soundId: json['sound'] as String? ?? 'digital',
         endAt: json['endAt'] != null ? DateTime.parse(json['endAt'] as String) : null,
         remainingWhenPaused:
             Duration(milliseconds: json['remainingWhenPausedMs'] as int? ?? 0),

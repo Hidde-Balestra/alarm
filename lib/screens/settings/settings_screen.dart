@@ -5,7 +5,7 @@ import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/update_service.dart';
-import 'package:alarm_app/widgets/sound_picker.dart';
+import 'package:alarm_app/widgets/sound_selector_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -129,19 +129,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             value: settings.defaultVibrate,
             onChanged: notifier.setDefaultVibrate,
           ),
-          ListTile(
-            title: Text(l10n.settingsDefaultAlarmSound),
-            trailing: SoundPicker(
-              value: settings.defaultAlarmSound,
-              onChanged: notifier.setDefaultAlarmSound,
-            ),
+          SoundSelectorTile(
+            title: l10n.settingsDefaultAlarmSound,
+            selectedId: settings.defaultAlarmSoundId,
+            onChanged: notifier.setDefaultAlarmSoundId,
           ),
-          ListTile(
-            title: Text(l10n.settingsDefaultTimerSound),
-            trailing: SoundPicker(
-              value: settings.defaultTimerSound,
-              onChanged: notifier.setDefaultTimerSound,
-            ),
+          SoundSelectorTile(
+            title: l10n.settingsDefaultTimerSound,
+            selectedId: settings.defaultTimerSoundId,
+            onChanged: notifier.setDefaultTimerSoundId,
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsPermissionsSection, subtitle: l10n.settingsPermissionsSubtitle),
@@ -243,56 +239,34 @@ class _UpdatesSectionState extends ConsumerState<_UpdatesSection> {
     });
   }
 
-  String _statusText(AppLocalizations l10n) {
-    if (_checking) return l10n.updateCheckingLabel;
-    switch (_result?.status) {
-      case UpdateStatus.updateAvailable:
-        return l10n.updateAvailableLabel(_result!.latestVersion ?? '');
-      case UpdateStatus.upToDate:
-        return l10n.updateUpToDateLabel;
-      case UpdateStatus.checkFailed:
-      case null:
-        return l10n.updateCheckFailedLabel;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final releaseUrl = _result?.releaseUrl;
-    final showViewRelease = _result?.status == UpdateStatus.updateAvailable && releaseUrl != null;
+    final hasUpdate = _result?.status == UpdateStatus.updateAvailable;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_currentVersion != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              l10n.currentVersionLabel(_currentVersion!),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        ListTile(
-          title: Text(_statusText(l10n)),
-          trailing: _checking
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : showViewRelease
-                  ? FilledButton(
-                      onPressed: () =>
-                          ref.read(updateServiceProvider).openReleasePage(releaseUrl),
-                      child: Text(l10n.updateViewReleaseButton),
-                    )
-                  : TextButton(
-                      onPressed: _check,
-                      child: Text(l10n.updateCheckNowButton),
-                    ),
-        ),
-      ],
+    return ListTile(
+      leading: const Icon(Icons.new_releases_outlined),
+      title: Text(l10n.githubReleasesTitle),
+      subtitle: hasUpdate
+          ? Text(
+              l10n.updateAvailableLabel(_result!.latestVersion ?? ''),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+            )
+          : _currentVersion != null
+              ? Text(l10n.currentVersionLabel(_currentVersion!))
+              : null,
+      trailing: _checking
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : hasUpdate
+              ? Icon(Icons.circle, color: Theme.of(context).colorScheme.primary, size: 10)
+              : const Icon(Icons.open_in_new, size: 16),
+      onTap: () => ref
+          .read(updateServiceProvider)
+          .openReleasePage(_result?.releaseUrl ?? UpdateService.releasesUrl),
     );
   }
 }

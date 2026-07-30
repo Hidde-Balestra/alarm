@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/models/app_sound.dart';
+import 'package:alarm_app/models/custom_sound.dart';
 import 'package:alarm_app/models/stopwatch_state.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
+import 'package:alarm_app/services/custom_sound_service.dart';
+import 'package:alarm_app/services/file_picker_service.dart';
 import 'package:alarm_app/services/permission_service.dart';
+import 'package:alarm_app/services/sound_preview_service.dart';
 import 'package:alarm_app/services/storage_service.dart';
 import 'package:alarm_app/services/update_service.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +31,14 @@ final permissionServiceProvider =
     Provider<PermissionService>((ref) => PermissionService());
 
 final updateServiceProvider = Provider<UpdateService>((ref) => UpdateService());
+
+final customSoundServiceProvider =
+    Provider<CustomSoundService>((ref) => CustomSoundService());
+
+final filePickerServiceProvider = Provider<FilePickerService>((ref) => FilePickerService());
+
+final soundPreviewServiceProvider =
+    Provider<SoundPreviewService>((ref) => SoundPreviewService());
 
 /// Ticks once a second so widgets showing a live countdown can rebuild.
 final clockProvider = StreamProvider<DateTime>((ref) {
@@ -61,15 +73,53 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   Future<void> setDefaultVibrate(bool vibrate) =>
       _update((s) => s.copyWith(defaultVibrate: vibrate));
 
-  Future<void> setDefaultAlarmSound(AppSound sound) =>
-      _update((s) => s.copyWith(defaultAlarmSound: sound));
+  Future<void> setDefaultAlarmSoundId(String soundId) =>
+      _update((s) => s.copyWith(defaultAlarmSoundId: soundId));
 
-  Future<void> setDefaultTimerSound(AppSound sound) =>
-      _update((s) => s.copyWith(defaultTimerSound: sound));
+  Future<void> setDefaultTimerSoundId(String soundId) =>
+      _update((s) => s.copyWith(defaultTimerSoundId: soundId));
 }
 
 final settingsProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(
   SettingsNotifier.new,
+);
+
+// --- Custom sounds ------------------------------------------------------------
+
+class CustomSoundsNotifier extends AsyncNotifier<List<CustomSound>> {
+  @override
+  Future<List<CustomSound>> build() => ref.watch(storageServiceProvider).loadCustomSounds();
+
+  Future<void> _persist(List<CustomSound> sounds) async {
+    state = AsyncData(sounds);
+    await ref.read(storageServiceProvider).saveCustomSounds(sounds);
+  }
+
+  /// Copies [file] into app storage and adds it to the list.
+  Future<CustomSound> addFromFile(PickedAudioFile file) async {
+    final relativePath =
+        await ref.read(customSoundServiceProvider).importFile(file.path, file.extension);
+    final sound = CustomSound(id: _uuid.v4(), name: file.name, relativePath: relativePath);
+    final current = await future;
+    await _persist([...current, sound]);
+    return sound;
+  }
+
+  Future<void> remove(String id) async {
+    final current = await future;
+    CustomSound? target;
+    for (final sound in current) {
+      if (sound.id == id) target = sound;
+    }
+    await _persist(current.where((s) => s.id != id).toList());
+    if (target != null) {
+      await ref.read(customSoundServiceProvider).deleteFile(target.relativePath);
+    }
+  }
+}
+
+final customSoundsProvider = AsyncNotifierProvider<CustomSoundsNotifier, List<CustomSound>>(
+  CustomSoundsNotifier.new,
 );
 
 // --- Alarms -----------------------------------------------------------------
@@ -169,21 +219,26 @@ class TimersNotifier extends AsyncNotifier<List<TimerSession>> {
     return current.firstWhere((t) => t.id == id);
   }
 
+  Future<String> _resolveSoundPath(String soundId) async {
+    final customSounds = await ref.read(customSoundsProvider.notifier).future;
+    return resolveSoundAssetPath(soundId, customSounds);
+  }
+
   Future<void> start({
     required String id,
     required Duration duration,
     required String label,
-    required AppSound sound,
+    required String soundId,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
   }) async {
-    final timer = TimerSession.start(id: id, duration: duration, label: label, sound: sound);
+    final timer = TimerSession.start(id: id, duration: duration, label: label, soundId: soundId);
     await add(timer);
     await ref.read(schedulerServiceProvider).scheduleTimer(
           id,
           timer.endAt!,
-          sound: sound,
+          soundAssetPath: await _resolveSoundPath(soundId),
           notificationTitle: notificationTitle,
           notificationBody: notificationBody,
           stopButtonLabel: stopButtonLabel,
@@ -209,7 +264,7 @@ class TimersNotifier extends AsyncNotifier<List<TimerSession>> {
     await ref.read(schedulerServiceProvider).scheduleTimer(
           id,
           resumed.endAt!,
-          sound: resumed.sound,
+          soundAssetPath: await _resolveSoundPath(resumed.soundId),
           notificationTitle: notificationTitle,
           notificationBody: notificationBody,
           stopButtonLabel: stopButtonLabel,
@@ -228,11 +283,20 @@ class TimersNotifier extends AsyncNotifier<List<TimerSession>> {
     await ref.read(schedulerServiceProvider).scheduleTimer(
           id,
           resetTimer.endAt!,
-          sound: resetTimer.sound,
+          soundAssetPath: await _resolveSoundPath(resetTimer.soundId),
           notificationTitle: notificationTitle,
           notificationBody: notificationBody,
           stopButtonLabel: stopButtonLabel,
         );
+  }
+
+  /// Called once a timer has rung and the user dismissed it: rather than
+  /// disappearing, it goes back to a paused, full-duration state so it stays
+  /// in the list ready to restart (or be deleted manually).
+  Future<void> finish(String id) async {
+    await ref.read(schedulerServiceProvider).cancelTimer(id);
+    final current = await _require(id);
+    await updateTimer(current.readyToRestart());
   }
 }
 

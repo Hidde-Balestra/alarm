@@ -82,17 +82,24 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     final settings = ref.watch(settingsProvider).valueOrNull ?? const AppSettings();
     final locale = resolveEffectiveLocale(settings);
 
-    ref.listen(alarmsProvider, (previous, next) {
-      final alarms = next.valueOrNull;
-      if (alarms == null) return;
+    void syncNow() {
+      final alarms = ref.read(alarmsProvider).valueOrNull;
+      final customSounds = ref.read(customSoundsProvider).valueOrNull;
+      if (alarms == null || customSounds == null) return;
       unawaited(
         syncAlarmsWithScheduler(
           alarms: alarms,
+          customSounds: customSounds,
           scheduler: ref.read(schedulerServiceProvider),
           l10n: lookupAppLocalizations(locale),
         ),
       );
-    });
+    }
+
+    // Re-sync whenever the alarm list changes, or when the custom sound
+    // catalog changes (e.g. a sound an alarm points to gets deleted).
+    ref.listen(alarmsProvider, (previous, next) => syncNow());
+    ref.listen(customSoundsProvider, (previous, next) => syncNow());
 
     return MaterialApp(
       navigatorKey: navigatorKey,

@@ -7,7 +7,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes/fake_alarm_scheduler_service.dart';
+import 'fakes/fake_custom_sound_service.dart';
+import 'fakes/fake_file_picker_service.dart';
 import 'fakes/fake_permission_service.dart';
+import 'fakes/fake_sound_preview_service.dart';
 import 'fakes/fake_update_service.dart';
 
 /// Pumps [child] inside a [ProviderScope] + [MaterialApp] with localizations
@@ -41,6 +44,9 @@ Future<void> pumpApp(
         schedulerServiceProvider.overrideWithValue(FakeAlarmSchedulerService()),
         permissionServiceProvider.overrideWithValue(FakePermissionService()),
         updateServiceProvider.overrideWithValue(FakeUpdateService()),
+        soundPreviewServiceProvider.overrideWithValue(FakeSoundPreviewService()),
+        customSoundServiceProvider.overrideWithValue(FakeCustomSoundService()),
+        filePickerServiceProvider.overrideWithValue(const FakeFilePickerService()),
         // Avoids a real periodic Timer leaking past test teardown.
         clockProvider.overrideWith((ref) => Stream.value(DateTime.now())),
         ...overrides,

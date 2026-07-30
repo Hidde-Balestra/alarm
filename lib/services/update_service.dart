@@ -39,6 +39,10 @@ class UpdateService {
   static const _owner = 'Hidde-Balestra';
   static const _repo = 'alarm';
 
+  /// Fallback target when there's no specific release URL yet (check still
+  /// in progress, or failed) — the Settings tile stays tappable regardless.
+  static const releasesUrl = 'https://github.com/$_owner/$_repo/releases';
+
   Future<UpdateCheckResult> checkForUpdate(String currentVersion) async {
     try {
       final response = await http

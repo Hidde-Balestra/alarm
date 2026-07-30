@@ -4,6 +4,7 @@ import 'package:alarm/alarm.dart' as plugin;
 import 'package:alarm/utils/alarm_set.dart' as plugin;
 import 'package:alarm_app/models/alarm.dart' as model;
 import 'package:alarm_app/models/app_sound.dart';
+import 'package:flutter/foundation.dart';
 
 /// What kind of ringing entity an [plugin.AlarmSettings.payload] refers to.
 enum RingingKind { alarm, timer }
@@ -45,12 +46,26 @@ class AlarmSchedulerService {
   int _numericId(RingingKind kind, String refId) =>
       ('${kind.name}-$refId').hashCode & 0x7fffffff;
 
+  // Swiping the app away from recents must NOT kill a scheduled/ringing
+  // alarm — that's the whole point of an alarm clock. The plugin's default
+  // (`true`) does the opposite, which is what produces Android's "your
+  // alarms may not ring, please reopen the app" warning notification.
+  static const _stopOnTermination = false;
+
+  // The Android warning notification above is misleading once
+  // `androidStopAlarmOnTermination` is false: the alarm keeps working after
+  // the app is killed, so there's nothing to warn about. On iOS, killing
+  // the app genuinely does stop the alarm, so the warning is still useful
+  // there — this mirrors the plugin's own documented recommendation.
+  bool get _warnOnKill => defaultTargetPlatform == TargetPlatform.iOS;
+
   /// Schedules [alarm]'s next occurrence, replacing whatever was previously
   /// scheduled for it. Cancels instead if the alarm is disabled or has no
   /// future occurrence.
   Future<void> scheduleNext(
     model.Alarm alarm, {
     required DateTime from,
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -64,11 +79,12 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.alarm, alarm.id),
         dateTime: next,
-        assetAudioPath: alarm.sound.assetPath,
+        assetAudioPath: soundAssetPath,
         loopAudio: true,
         vibrate: alarm.vibrate,
         androidFullScreenIntent: true,
-        warningNotificationOnKill: true,
+        androidStopAlarmOnTermination: _stopOnTermination,
+        warningNotificationOnKill: _warnOnKill,
         volumeSettings: const plugin.VolumeSettings.fixed(
           volume: 1,
           volumeEnforced: true,
@@ -87,6 +103,7 @@ class AlarmSchedulerService {
   /// [alarm.snoozeMinutes], instead of its normal repeat-rule occurrence.
   Future<void> snooze(
     model.Alarm alarm, {
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -95,11 +112,12 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.alarm, alarm.id),
         dateTime: DateTime.now().add(Duration(minutes: alarm.snoozeMinutes)),
-        assetAudioPath: alarm.sound.assetPath,
+        assetAudioPath: soundAssetPath,
         loopAudio: true,
         vibrate: alarm.vibrate,
         androidFullScreenIntent: true,
-        warningNotificationOnKill: true,
+        androidStopAlarmOnTermination: _stopOnTermination,
+        warningNotificationOnKill: _warnOnKill,
         volumeSettings: const plugin.VolumeSettings.fixed(
           volume: 1,
           volumeEnforced: true,
@@ -139,7 +157,8 @@ class AlarmSchedulerService {
         loopAudio: true,
         vibrate: true,
         androidFullScreenIntent: true,
-        warningNotificationOnKill: true,
+        androidStopAlarmOnTermination: _stopOnTermination,
+        warningNotificationOnKill: _warnOnKill,
         volumeSettings: const plugin.VolumeSettings.fixed(
           volume: 1,
           volumeEnforced: true,
@@ -158,7 +177,7 @@ class AlarmSchedulerService {
   Future<void> scheduleTimer(
     String timerId,
     DateTime end, {
-    required AppSound sound,
+    required String soundAssetPath,
     required String notificationTitle,
     required String notificationBody,
     required String stopButtonLabel,
@@ -167,11 +186,12 @@ class AlarmSchedulerService {
       alarmSettings: plugin.AlarmSettings(
         id: _numericId(RingingKind.timer, timerId),
         dateTime: end,
-        assetAudioPath: sound.assetPath,
+        assetAudioPath: soundAssetPath,
         loopAudio: true,
         vibrate: true,
         androidFullScreenIntent: true,
-        warningNotificationOnKill: true,
+        androidStopAlarmOnTermination: _stopOnTermination,
+        warningNotificationOnKill: _warnOnKill,
         volumeSettings: const plugin.VolumeSettings.fixed(
           volume: 1,
           volumeEnforced: true,

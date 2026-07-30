@@ -1,5 +1,4 @@
 import 'package:alarm_app/models/app_settings.dart';
-import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/settings/settings_screen.dart';
 import 'package:alarm_app/services/permission_service.dart';
@@ -123,13 +122,13 @@ void main() {
     );
 
     // Default alarm sound is Classic, default timer sound is Digital —
-    // tapping "Classic" unambiguously opens the alarm-sound dropdown.
+    // tapping "Classic" unambiguously opens the alarm-sound picker.
     await tester.tap(find.text('Classic'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Siren').last);
     await tester.pumpAndSettle();
 
-    expect(container.read(settingsProvider).valueOrNull?.defaultAlarmSound, AppSound.siren);
+    expect(container.read(settingsProvider).valueOrNull?.defaultAlarmSoundId, 'siren');
   });
 
   testWidgets('changing the default timer sound updates settings', (tester) async {
@@ -149,26 +148,32 @@ void main() {
     await tester.tap(find.text('Gentle').last);
     await tester.pumpAndSettle();
 
-    expect(container.read(settingsProvider).valueOrNull?.defaultTimerSound, AppSound.gentle);
+    expect(container.read(settingsProvider).valueOrNull?.defaultTimerSoundId, 'gentle');
   });
 
-  testWidgets('shows the current version and up-to-date status', (tester) async {
+  testWidgets('shows the current version when up to date, and opens the release page on tap',
+      (tester) async {
+    final fakeUpdates =
+        FakeUpdateService(result: const UpdateCheckResult(status: UpdateStatus.upToDate));
     await pumpApp(
       tester,
       const SettingsScreen(),
-      overrides: [
-        updateServiceProvider.overrideWithValue(
-          FakeUpdateService(result: const UpdateCheckResult(status: UpdateStatus.upToDate)),
-        ),
-      ],
+      overrides: [updateServiceProvider.overrideWithValue(fakeUpdates)],
     );
 
+    expect(find.text('GitHub Releases'), findsOneWidget);
     expect(find.text('Current version: 0.0.0'), findsOneWidget);
-    expect(find.text("You're on the latest version"), findsOneWidget);
-    expect(find.text('View release'), findsNothing);
+    expect(find.byIcon(Icons.open_in_new), findsOneWidget);
+
+    await tester.tap(find.text('GitHub Releases'));
+    await tester.pumpAndSettle();
+
+    expect(fakeUpdates.openReleasePageCallCount, 1);
+    expect(fakeUpdates.lastOpenedUrl, UpdateService.releasesUrl);
   });
 
-  testWidgets('shows an update-available card with a working release link', (tester) async {
+  testWidgets('shows an update-available badge and opens the specific release on tap',
+      (tester) async {
     final fakeUpdates = FakeUpdateService(
       result: const UpdateCheckResult(
         status: UpdateStatus.updateAvailable,
@@ -184,25 +189,28 @@ void main() {
 
     expect(find.text('Update available: 9.9.9'), findsOneWidget);
 
-    await tester.tap(find.text('View release'));
+    await tester.tap(find.text('GitHub Releases'));
     await tester.pumpAndSettle();
 
     expect(fakeUpdates.openReleasePageCallCount, 1);
     expect(fakeUpdates.lastOpenedUrl, 'https://github.com/Hidde-Balestra/alarm/releases/tag/v9.9.9');
   });
 
-  testWidgets('a failed check shows an error state with a retry button', (tester) async {
+  testWidgets('a failed check still shows the current version and stays tappable',
+      (tester) async {
+    final fakeUpdates =
+        FakeUpdateService(result: const UpdateCheckResult(status: UpdateStatus.checkFailed));
     await pumpApp(
       tester,
       const SettingsScreen(),
-      overrides: [
-        updateServiceProvider.overrideWithValue(
-          FakeUpdateService(result: const UpdateCheckResult(status: UpdateStatus.checkFailed)),
-        ),
-      ],
+      overrides: [updateServiceProvider.overrideWithValue(fakeUpdates)],
     );
 
-    expect(find.text("Couldn't check for updates"), findsOneWidget);
-    expect(find.text('Check now'), findsOneWidget);
+    expect(find.text('Current version: 0.0.0'), findsOneWidget);
+
+    await tester.tap(find.text('GitHub Releases'));
+    await tester.pumpAndSettle();
+
+    expect(fakeUpdates.lastOpenedUrl, UpdateService.releasesUrl);
   });
 }

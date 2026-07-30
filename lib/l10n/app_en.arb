@@ -37,6 +37,14 @@
   "soundDigital": "Digital",
   "soundGentle": "Gentle",
   "soundSiren": "Siren",
+  "soundsScreenTitle": "Sounds",
+  "customSoundsSectionTitle": "Uploaded sounds",
+  "customSoundsEmptyHint": "No uploaded sounds yet.",
+  "uploadSoundButton": "Upload a sound",
+  "deleteSoundConfirm": "Delete \"{name}\"?",
+  "@deleteSoundConfirm": {
+    "placeholders": {"name": {"type": "String"}}
+  },
   "vibrationLabel": "Vibration",
   "snoozeDurationLabel": "Snooze duration",
   "minutesShort": "{minutes} min",
@@ -127,6 +135,7 @@
   "settingsIosCriticalAlertsNote": "On iOS, ringing through the mute switch and Do Not Disturb requires Apple's Critical Alerts permission, which Apple grants per app on request. Without it, alarms use Time Sensitive notifications instead.",
 
   "settingsUpdatesSection": "Updates",
+  "githubReleasesTitle": "GitHub Releases",
   "currentVersionLabel": "Current version: {version}",
   "@currentVersionLabel": {
     "placeholders": {"version": {"type": "String"}}
