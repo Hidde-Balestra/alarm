@@ -3,12 +3,17 @@ import 'dart:async';
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/providers/providers.dart';
+import 'package:alarm_app/screens/history/history_screen.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/update_service.dart';
 import 'package:alarm_app/widgets/sound_selector_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+const _volumeRampOptions = [0, 10, 30, 60];
+const _maxSnoozeOptions = [0, 1, 2, 3, 5];
+const _sleepHoursOptions = [6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0];
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -138,6 +143,82 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             title: l10n.settingsDefaultTimerSound,
             selectedId: settings.defaultTimerSoundId,
             onChanged: notifier.setDefaultTimerSoundId,
+          ),
+          ListTile(
+            title: Text(l10n.maxSnoozesLabel),
+            trailing: DropdownButton<int>(
+              value: settings.defaultMaxSnoozes,
+              items: [
+                for (final count in _maxSnoozeOptions)
+                  DropdownMenuItem(
+                    value: count,
+                    child: Text(count == 0 ? l10n.maxSnoozesUnlimited : '$count'),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) notifier.setDefaultMaxSnoozes(value);
+              },
+            ),
+          ),
+          ListTile(
+            title: Text(l10n.volumeRampLabel),
+            trailing: DropdownButton<int>(
+              value: settings.defaultVolumeRampSeconds,
+              items: [
+                for (final seconds in _volumeRampOptions)
+                  DropdownMenuItem(
+                    value: seconds,
+                    child: Text(seconds == 0 ? l10n.volumeRampOff : '$seconds${l10n.secondsShort}'),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) notifier.setDefaultVolumeRampSeconds(value);
+              },
+            ),
+          ),
+          SwitchListTile(
+            title: Text(l10n.requireMathToDismissLabel),
+            subtitle: Text(l10n.requireMathToDismissHint),
+            value: settings.defaultRequireMathToDismiss,
+            onChanged: notifier.setDefaultRequireMathToDismiss,
+          ),
+          const Divider(),
+          _SectionHeader(title: l10n.settingsBedtimeSection, subtitle: l10n.settingsBedtimeSubtitle),
+          ListTile(
+            title: Text(l10n.desiredSleepHoursLabel),
+            trailing: DropdownButton<double>(
+              value: settings.desiredSleepHours,
+              items: [
+                for (final hours in _sleepHoursOptions)
+                  DropdownMenuItem(
+                    value: hours,
+                    child: Text(
+                      '${hours == hours.roundToDouble() ? hours.toInt() : hours}${l10n.hoursShort}',
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) notifier.setDesiredSleepHours(value);
+              },
+            ),
+          ),
+          const Divider(),
+          _SectionHeader(
+              title: l10n.settingsPauseSection, subtitle: l10n.settingsPauseSubtitle),
+          SwitchListTile(
+            title: Text(l10n.alarmsPausedToggleLabel),
+            value: settings.alarmsPaused,
+            onChanged: notifier.setAlarmsPaused,
+          ),
+          const Divider(),
+          _SectionHeader(title: l10n.settingsHistorySection),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: Text(l10n.viewHistoryAction),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HistoryScreen()),
+            ),
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsPermissionsSection, subtitle: l10n.settingsPermissionsSubtitle),

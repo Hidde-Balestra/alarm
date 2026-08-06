@@ -213,4 +213,31 @@ void main() {
 
     expect(fakeUpdates.lastOpenedUrl, UpdateService.releasesUrl);
   });
+
+  testWidgets('toggling "Pause all alarms" updates the settings provider', (tester) async {
+    late ProviderContainer container;
+    await pumpApp(
+      tester,
+      Consumer(
+        builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const SettingsScreen();
+        },
+      ),
+    );
+
+    await tester.tap(find.text('Pause all alarms'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).valueOrNull?.alarmsPaused, isTrue);
+  });
+
+  testWidgets('tapping the history row opens the history screen', (tester) async {
+    await pumpApp(tester, const SettingsScreen());
+
+    await tester.tap(find.text('View alarm & timer history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('History'), findsWidgets);
+  });
 }

@@ -12,15 +12,25 @@ import 'package:alarm_app/services/alarm_scheduler_service.dart';
 /// future occurrence and replaces whatever was previously scheduled for that
 /// alarm's id, so calling this repeatedly is a no-op for alarms that haven't
 /// changed.
+///
+/// When [paused] is true (the "pause all alarms" setting), every alarm is
+/// cancelled at the OS level regardless of its own `enabled` flag — but that
+/// flag itself is left untouched, so turning the pause back off restores
+/// exactly the alarms that were on before.
 Future<void> syncAlarmsWithScheduler({
   required List<Alarm> alarms,
   required List<CustomSound> customSounds,
   required AlarmSchedulerService scheduler,
   required AppLocalizations l10n,
+  bool paused = false,
   DateTime? now,
 }) async {
   final from = now ?? DateTime.now();
   for (final alarm in alarms) {
+    if (paused) {
+      await scheduler.cancelAlarm(alarm.id);
+      continue;
+    }
     await scheduler.scheduleNext(
       alarm,
       from: from,

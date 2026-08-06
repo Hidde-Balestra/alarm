@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const _snoozeOptions = [3, 5, 9, 10, 15, 20];
+const _volumeRampOptions = [0, 10, 30, 60];
+const _maxSnoozeOptions = [0, 1, 2, 3, 5];
 
 class AlarmEditScreen extends ConsumerStatefulWidget {
   final Alarm? alarm;
@@ -28,6 +30,9 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
   late bool _vibrate;
   late int _snoozeMinutes;
   late String _soundId;
+  late int _volumeRampSeconds;
+  late bool _requireMathToDismiss;
+  late int _maxSnoozes;
 
   bool get _isNew => widget.alarm == null;
 
@@ -44,6 +49,10 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     _vibrate = alarm?.vibrate ?? defaults?.defaultVibrate ?? true;
     _snoozeMinutes = alarm?.snoozeMinutes ?? defaults?.defaultSnoozeMinutes ?? 9;
     _soundId = alarm?.soundId ?? defaults?.defaultAlarmSoundId ?? 'classic';
+    _volumeRampSeconds = alarm?.volumeRampSeconds ?? defaults?.defaultVolumeRampSeconds ?? 0;
+    _requireMathToDismiss =
+        alarm?.requireMathToDismiss ?? defaults?.defaultRequireMathToDismiss ?? false;
+    _maxSnoozes = alarm?.maxSnoozes ?? defaults?.defaultMaxSnoozes ?? 0;
   }
 
   @override
@@ -105,6 +114,11 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       vibrate: _vibrate,
       snoozeMinutes: _snoozeMinutes,
       soundId: _soundId,
+      volumeRampSeconds: _volumeRampSeconds,
+      requireMathToDismiss: _requireMathToDismiss,
+      maxSnoozes: _maxSnoozes,
+      snoozeCount: widget.alarm?.snoozeCount ?? 0,
+      skippedOccurrence: widget.alarm?.skippedOccurrence,
     );
     await notifier.upsert(alarm);
     if (mounted) Navigator.of(context).pop();
@@ -268,6 +282,48 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                 if (value != null) setState(() => _snoozeMinutes = value);
               },
             ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.maxSnoozesLabel),
+            trailing: DropdownButton<int>(
+              value: _maxSnoozes,
+              items: [
+                for (final count in _maxSnoozeOptions)
+                  DropdownMenuItem(
+                    value: count,
+                    child: Text(count == 0 ? l10n.maxSnoozesUnlimited : '$count'),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _maxSnoozes = value);
+              },
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.volumeRampLabel),
+            trailing: DropdownButton<int>(
+              value: _volumeRampSeconds,
+              items: [
+                for (final seconds in _volumeRampOptions)
+                  DropdownMenuItem(
+                    value: seconds,
+                    child: Text(seconds == 0 ? l10n.volumeRampOff : '$seconds${l10n.secondsShort}'),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _volumeRampSeconds = value);
+              },
+            ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.requireMathToDismissLabel),
+            subtitle: Text(l10n.requireMathToDismissHint),
+            isThreeLine: true,
+            value: _requireMathToDismiss,
+            onChanged: (value) => setState(() => _requireMathToDismiss = value),
           ),
         ],
       ),

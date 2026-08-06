@@ -4,14 +4,21 @@ import 'dart:ui' as ui;
 import 'package:alarm/utils/alarm_set.dart' as plugin;
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/app_settings.dart';
+import 'package:alarm_app/models/history_entry.dart';
+import 'package:alarm_app/models/upcoming_alarm.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/home_shell.dart';
 import 'package:alarm_app/screens/ringing/ringing_screen.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/alarm_sync_coordinator.dart';
+import 'package:alarm_app/services/home_widget_service.dart';
 import 'package:alarm_app/theme.dart';
+import 'package:alarm_app/widgets/format_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+const _uuid = Uuid();
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -59,6 +66,16 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     if (ringingRef == null) return;
 
     _showingRingScreen = true;
+    unawaited(ref.read(historyProvider.notifier).record(
+          HistoryEntry(
+            id: _uuid.v4(),
+            kind: ringingRef.kind,
+            refId: ringingRef.refId,
+            label: _labelFor(ringingRef),
+            action: HistoryAction.rang,
+            timestamp: DateTime.now(),
+          ),
+        ));
     navigatorKey.currentState
         ?.push(
           MaterialPageRoute(
@@ -67,6 +84,21 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
           ),
         )
         .then((_) => _showingRingScreen = false);
+  }
+
+  String _labelFor(RingingRef ringingRef) {
+    if (ringingRef.kind == RingingKind.alarm) {
+      final alarms = ref.read(alarmsProvider).valueOrNull ?? const [];
+      for (final a in alarms) {
+        if (a.id == ringingRef.refId) return a.label;
+      }
+    } else {
+      final timers = ref.read(timersProvider).valueOrNull ?? const [];
+      for (final t in timers) {
+        if (t.id == ringingRef.refId) return t.label;
+      }
+    }
+    return '';
   }
 
   @override
@@ -86,20 +118,37 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
       final alarms = ref.read(alarmsProvider).valueOrNull;
       final customSounds = ref.read(customSoundsProvider).valueOrNull;
       if (alarms == null || customSounds == null) return;
+      final paused = ref.read(settingsProvider).valueOrNull?.alarmsPaused ?? false;
       unawaited(
         syncAlarmsWithScheduler(
           alarms: alarms,
           customSounds: customSounds,
           scheduler: ref.read(schedulerServiceProvider),
           l10n: lookupAppLocalizations(locale),
+          paused: paused,
         ),
+      );
+
+      final upcoming = paused ? null : nextUpcomingAlarm(alarms, DateTime.now());
+      unawaited(
+        ref.read(homeWidgetServiceProvider).updateNextAlarm(
+              timeText: upcoming != null
+                  ? formatTimeOfDay(context, upcoming.alarm.hour, upcoming.alarm.minute)
+                  : null,
+              labelText: upcoming?.alarm.label,
+            ),
       );
     }
 
     // Re-sync whenever the alarm list changes, or when the custom sound
-    // catalog changes (e.g. a sound an alarm points to gets deleted).
+    // catalog or pause setting changes (e.g. a sound an alarm points to gets
+    // deleted, or "pause all" gets toggled).
     ref.listen(alarmsProvider, (previous, next) => syncNow());
     ref.listen(customSoundsProvider, (previous, next) => syncNow());
+    ref.listen(
+      settingsProvider.select((s) => s.valueOrNull?.alarmsPaused),
+      (previous, next) => syncNow(),
+    );
 
     return MaterialApp(
       navigatorKey: navigatorKey,

@@ -13,6 +13,11 @@ void main() {
       repeat: RepeatRule.biweekly({DateTime.monday, DateTime.thursday}, DateTime(2026, 7, 20)),
       vibrate: false,
       snoozeMinutes: 5,
+      volumeRampSeconds: 30,
+      requireMathToDismiss: true,
+      maxSnoozes: 3,
+      snoozeCount: 2,
+      skippedOccurrence: DateTime(2026, 7, 22, 7, 30),
     );
 
     final restored = Alarm.fromJson(alarm.toJson());
@@ -28,6 +33,49 @@ void main() {
     expect(restored.vibrate, isTrue);
     expect(restored.snoozeMinutes, 9);
     expect(restored.repeat, const RepeatRule.none());
+    expect(restored.volumeRampSeconds, 0);
+    expect(restored.requireMathToDismiss, isFalse);
+    expect(restored.maxSnoozes, 0);
+    expect(restored.snoozeCount, 0);
+    expect(restored.skippedOccurrence, isNull);
+  });
+
+  group('effectiveNextOccurrence', () {
+    test('matches nextOccurrence when nothing is skipped', () {
+      const alarm = Alarm(id: 'x', hour: 7, minute: 0, repeat: RepeatRule.daily());
+      final from = DateTime(2026, 7, 21, 6, 0);
+
+      expect(alarm.effectiveNextOccurrence(from), alarm.nextOccurrence(from));
+    });
+
+    test('skips the marked occurrence and returns the one after', () {
+      const rule = RepeatRule.daily();
+      final from = DateTime(2026, 7, 21, 6, 0);
+      final skipped = rule.nextOccurrence(from, hour: 7, minute: 0)!;
+      final alarm = Alarm(
+        id: 'x',
+        hour: 7,
+        minute: 0,
+        repeat: rule,
+        skippedOccurrence: skipped,
+      );
+
+      expect(alarm.effectiveNextOccurrence(from), DateTime(2026, 7, 22, 7, 0));
+    });
+
+    test('ignores a skippedOccurrence that has already passed (self-healing)', () {
+      const rule = RepeatRule.daily();
+      final alarm = Alarm(
+        id: 'x',
+        hour: 7,
+        minute: 0,
+        repeat: rule,
+        skippedOccurrence: DateTime(2026, 7, 20, 7, 0),
+      );
+      final from = DateTime(2026, 7, 21, 6, 0);
+
+      expect(alarm.effectiveNextOccurrence(from), DateTime(2026, 7, 21, 7, 0));
+    });
   });
 
   test('copyWith only changes the specified fields', () {

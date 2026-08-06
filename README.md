@@ -11,6 +11,14 @@ A Flutter alarm clock & timer app for Android and iOS, built for reliability: al
 - Light / dark / system theme.
 - Dutch and English UI (system, or pick one explicitly in Settings).
 - A Settings screen with shortcuts to the Android permissions that matter most for alarms actually firing: notifications, exact alarms, Do Not Disturb access, and battery-optimization exemption.
+- Optional gradual volume ramp-up per alarm, instead of ringing at full volume immediately.
+- Optional "solve a math problem to dismiss" — snoozing stays one tap, but stopping the alarm for good requires a correct answer.
+- A configurable max number of snoozes per alarm.
+- "Skip next occurrence" on a repeating alarm, for a one-off day off without disabling it.
+- A manual "pause all alarms" mode for e.g. a holiday, without losing each alarm's individual on/off state.
+- An Android homescreen widget showing the next upcoming alarm.
+- A bedtime card on the Alarms screen, computed from your first alarm tomorrow and a configurable desired sleep duration.
+- A history log of when alarms/timers rang, got snoozed, or were dismissed.
 
 ## Reliability notes
 
@@ -55,12 +63,14 @@ Without that file, release builds fall back to debug signing so `flutter build a
 
 ```
 lib/
-  models/       Alarm, RepeatRule (incl. the biweekly logic), TimerSession, AppSettings
-  services/      OS alarm scheduling, local storage, permissions
-  providers/     Riverpod state (alarms, timers, settings)
-  screens/       Alarms, Timer, Settings, and the full-screen ringing UI
+  models/       Alarm, RepeatRule (incl. the biweekly logic), TimerSession, AppSettings, HistoryEntry
+  services/      OS alarm scheduling, local storage, permissions, homescreen widget push
+  providers/     Riverpod state (alarms, timers, settings, history)
+  screens/       Alarms, Timer, Settings, History, and the full-screen ringing UI
   widgets/       Shared UI pieces (weekday picker, formatting helpers)
   l10n/          ARB translation source files (English is the template)
+android/app/src/main/kotlin/.../AlarmWidgetProvider.kt
+                 Android homescreen widget (Android-only; no iOS equivalent)
 test/
   unit/          Pure logic: repeat-rule occurrence calculation, model (de)serialization
   widget/        Screen-level behavior, with fakes standing in for platform plugins

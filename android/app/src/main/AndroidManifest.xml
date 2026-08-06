@@ -21,6 +21,16 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <service android:name="com.gdelataillade.alarm.services.NotificationOnKillService"/>
+        <receiver
+            android:name=".AlarmWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/alarm_widget_info"/>
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -32,6 +32,9 @@
     "placeholders": {"when": {"type": "String"}}
   },
   "nextOccurrenceUnknown": "Pick at least one day",
+  "nextOccurrenceSkippedLabel": "Next occurrence skipped",
+  "skipNextAction": "Skip next occurrence",
+  "unskipNextAction": "Cancel skip",
   "soundSectionTitle": "Sound",
   "soundClassic": "Classic",
   "soundDigital": "Digital",
@@ -51,6 +54,12 @@
   "@minutesShort": {
     "placeholders": {"minutes": {"type": "int"}}
   },
+  "maxSnoozesLabel": "Max snoozes",
+  "maxSnoozesUnlimited": "Unlimited",
+  "volumeRampLabel": "Gradually get louder",
+  "volumeRampOff": "Off",
+  "requireMathToDismissLabel": "Require a math problem to dismiss",
+  "requireMathToDismissHint": "Snoozing stays one tap; dismissing needs a correct answer first.",
   "save": "Save",
   "cancel": "Cancel",
   "delete": "Delete",
@@ -72,6 +81,8 @@
   "@snoozedFor": {
     "placeholders": {"minutes": {"type": "int"}}
   },
+  "mathChallengeTitle": "Solve to dismiss",
+  "mathChallengeWrongAnswer": "Not quite — try again",
 
   "timerEmptyTitle": "No timers running",
   "addTimer": "Add timer",
@@ -108,6 +119,31 @@
   "settingsDefaultVibration": "Vibrate by default",
   "settingsDefaultAlarmSound": "Default alarm sound",
   "settingsDefaultTimerSound": "Default timer sound",
+
+  "settingsBedtimeSection": "Bedtime",
+  "settingsBedtimeSubtitle": "Used to work out when to go to sleep for your next alarm",
+  "desiredSleepHoursLabel": "Desired sleep",
+  "bedtimeCardTitle": "Go to sleep by {bedtime}",
+  "@bedtimeCardTitle": {
+    "placeholders": {"bedtime": {"type": "String"}}
+  },
+  "bedtimeCardSubtitle": "To get enough sleep before your {alarmTime} alarm",
+  "@bedtimeCardSubtitle": {
+    "placeholders": {"alarmTime": {"type": "String"}}
+  },
+
+  "settingsPauseSection": "Pause mode",
+  "settingsPauseSubtitle": "Turn every alarm off temporarily, e.g. for a holiday — without losing your individual on/off settings",
+  "alarmsPausedToggleLabel": "Pause all alarms",
+  "alarmsPausedBanner": "Alarms are paused — tap to resume",
+
+  "settingsHistorySection": "History",
+  "viewHistoryAction": "View alarm & timer history",
+  "historyScreenTitle": "History",
+  "historyEmptyTitle": "Nothing here yet",
+  "historyActionRang": "Rang",
+  "historyActionSnoozed": "Snoozed",
+  "historyActionDismissed": "Dismissed",
 
   "settingsPermissionsSection": "Reliability",
   "settingsPermissionsSubtitle": "So your alarm doesn't get silenced or killed by the system",

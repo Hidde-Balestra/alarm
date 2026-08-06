@@ -4,11 +4,13 @@ import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/custom_sound.dart';
+import 'package:alarm_app/models/history_entry.dart';
 import 'package:alarm_app/models/stopwatch_state.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/custom_sound_service.dart';
 import 'package:alarm_app/services/file_picker_service.dart';
+import 'package:alarm_app/services/home_widget_service.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/sound_preview_service.dart';
 import 'package:alarm_app/services/storage_service.dart';
@@ -36,6 +38,8 @@ final customSoundServiceProvider =
     Provider<CustomSoundService>((ref) => CustomSoundService());
 
 final filePickerServiceProvider = Provider<FilePickerService>((ref) => FilePickerService());
+
+final homeWidgetServiceProvider = Provider<HomeWidgetService>((ref) => HomeWidgetService());
 
 final soundPreviewServiceProvider =
     Provider<SoundPreviewService>((ref) => SoundPreviewService());
@@ -78,6 +82,21 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
 
   Future<void> setDefaultTimerSoundId(String soundId) =>
       _update((s) => s.copyWith(defaultTimerSoundId: soundId));
+
+  Future<void> setDefaultVolumeRampSeconds(int seconds) =>
+      _update((s) => s.copyWith(defaultVolumeRampSeconds: seconds));
+
+  Future<void> setDefaultRequireMathToDismiss(bool value) =>
+      _update((s) => s.copyWith(defaultRequireMathToDismiss: value));
+
+  Future<void> setDefaultMaxSnoozes(int count) =>
+      _update((s) => s.copyWith(defaultMaxSnoozes: count));
+
+  Future<void> setAlarmsPaused(bool paused) =>
+      _update((s) => s.copyWith(alarmsPaused: paused));
+
+  Future<void> setDesiredSleepHours(double hours) =>
+      _update((s) => s.copyWith(desiredSleepHours: hours));
 }
 
 final settingsProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(
@@ -126,7 +145,21 @@ final customSoundsProvider = AsyncNotifierProvider<CustomSoundsNotifier, List<Cu
 
 class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
   @override
-  Future<List<Alarm>> build() => ref.watch(storageServiceProvider).loadAlarms();
+  Future<List<Alarm>> build() async {
+    final alarms = await ref.watch(storageServiceProvider).loadAlarms();
+    // Clear any skippedOccurrence that's already in the past — see
+    // Alarm.effectiveNextOccurrence for why this self-heals instead of
+    // silently skipping the occurrence after the one the user meant.
+    final now = DateTime.now();
+    final sanitized = [
+      for (final a in alarms)
+        if (a.skippedOccurrence != null && a.skippedOccurrence!.isBefore(now))
+          a.copyWith(clearSkippedOccurrence: true)
+        else
+          a,
+    ];
+    return sanitized;
+  }
 
   List<Alarm> _sorted(List<Alarm> alarms) => [...alarms]
     ..sort((a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute));
@@ -172,6 +205,33 @@ class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
   /// Called when an alarm without repeat has finished ringing: it doesn't
   /// recur, so it goes back to disabled rather than staying "on" forever.
   Future<void> disableAfterOneShot(String id) => setEnabled(id, false);
+
+  Future<void> _updateOne(String id, Alarm Function(Alarm) transform) async {
+    final current = await future;
+    final updated = [
+      for (final a in current)
+        if (a.id == id) transform(a) else a,
+    ];
+    await _persist(updated);
+  }
+
+  Future<void> incrementSnoozeCount(String id) =>
+      _updateOne(id, (a) => a.copyWith(snoozeCount: a.snoozeCount + 1));
+
+  Future<void> resetSnoozeCount(String id) =>
+      _updateOne(id, (a) => a.copyWith(snoozeCount: 0));
+
+  /// Marks the alarm's next occurrence (as of now) to be skipped, e.g. the
+  /// "skip tomorrow" action on a repeating alarm.
+  Future<void> skipNext(String id) => _updateOne(id, (a) {
+        final next = a.nextOccurrence(DateTime.now());
+        if (next == null) return a;
+        return a.copyWith(skippedOccurrence: next);
+      });
+
+  /// Undoes [skipNext].
+  Future<void> unskipNext(String id) =>
+      _updateOne(id, (a) => a.copyWith(clearSkippedOccurrence: true));
 }
 
 final alarmsProvider = AsyncNotifierProvider<AlarmsNotifier, List<Alarm>>(AlarmsNotifier.new);
@@ -302,6 +362,29 @@ class TimersNotifier extends AsyncNotifier<List<TimerSession>> {
 
 final timersProvider = AsyncNotifierProvider<TimersNotifier, List<TimerSession>>(
   TimersNotifier.new,
+);
+
+// --- History --------------------------------------------------------------
+
+class HistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
+  @override
+  Future<List<HistoryEntry>> build() => ref.watch(storageServiceProvider).loadHistory();
+
+  /// Adds [entry] to the front of the log, trimmed to
+  /// [StorageService.historyLimit] most-recent entries.
+  Future<void> record(HistoryEntry entry) async {
+    final current = await future;
+    final updated = [entry, ...current];
+    final bounded = updated.length > StorageService.historyLimit
+        ? updated.sublist(0, StorageService.historyLimit)
+        : updated;
+    state = AsyncData(bounded);
+    await ref.read(storageServiceProvider).saveHistory(bounded);
+  }
+}
+
+final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<HistoryEntry>>(
+  HistoryNotifier.new,
 );
 
 // --- Stopwatch ----------------------------------------------------------------

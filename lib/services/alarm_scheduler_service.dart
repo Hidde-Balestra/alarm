@@ -46,6 +46,19 @@ class AlarmSchedulerService {
   int _numericId(RingingKind kind, String refId) =>
       ('${kind.name}-$refId').hashCode & 0x7fffffff;
 
+  /// Full volume immediately, or a gradual fade-in over [rampSeconds] if
+  /// set — lets an alarm ease someone awake instead of blasting instantly.
+  plugin.VolumeSettings _volumeSettings(int rampSeconds) {
+    if (rampSeconds <= 0) {
+      return const plugin.VolumeSettings.fixed(volume: 1, volumeEnforced: true);
+    }
+    return plugin.VolumeSettings.fade(
+      volume: 1,
+      fadeDuration: Duration(seconds: rampSeconds),
+      volumeEnforced: true,
+    );
+  }
+
   // Swiping the app away from recents must NOT kill a scheduled/ringing
   // alarm — that's the whole point of an alarm clock. The plugin's default
   // (`true`) does the opposite, which is what produces Android's "your
@@ -70,7 +83,7 @@ class AlarmSchedulerService {
     required String notificationBody,
     required String stopButtonLabel,
   }) async {
-    final next = alarm.enabled ? alarm.nextOccurrence(from) : null;
+    final next = alarm.enabled ? alarm.effectiveNextOccurrence(from) : null;
     if (next == null) {
       await cancelAlarm(alarm.id);
       return;
@@ -85,10 +98,7 @@ class AlarmSchedulerService {
         androidFullScreenIntent: true,
         androidStopAlarmOnTermination: _stopOnTermination,
         warningNotificationOnKill: _warnOnKill,
-        volumeSettings: const plugin.VolumeSettings.fixed(
-          volume: 1,
-          volumeEnforced: true,
-        ),
+        volumeSettings: _volumeSettings(alarm.volumeRampSeconds),
         notificationSettings: plugin.NotificationSettings(
           title: notificationTitle,
           body: notificationBody,
@@ -118,10 +128,7 @@ class AlarmSchedulerService {
         androidFullScreenIntent: true,
         androidStopAlarmOnTermination: _stopOnTermination,
         warningNotificationOnKill: _warnOnKill,
-        volumeSettings: const plugin.VolumeSettings.fixed(
-          volume: 1,
-          volumeEnforced: true,
-        ),
+        volumeSettings: _volumeSettings(alarm.volumeRampSeconds),
         notificationSettings: plugin.NotificationSettings(
           title: notificationTitle,
           body: notificationBody,
