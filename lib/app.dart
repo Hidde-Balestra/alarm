@@ -76,6 +76,9 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
             timestamp: DateTime.now(),
           ),
         ));
+    // Guarantees the ringing screen is visible/usable even if the device was
+    // fully locked and asleep when the alarm fired — see LockscreenService.
+    unawaited(ref.read(lockscreenServiceProvider).showOverLockscreen());
     navigatorKey.currentState
         ?.push(
           MaterialPageRoute(
@@ -83,7 +86,10 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
             fullscreenDialog: true,
           ),
         )
-        .then((_) => _showingRingScreen = false);
+        .then((_) {
+      _showingRingScreen = false;
+      unawaited(ref.read(lockscreenServiceProvider).restoreLockscreen());
+    });
   }
 
   String _labelFor(RingingRef ringingRef) {

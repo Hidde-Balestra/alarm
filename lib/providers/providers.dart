@@ -11,6 +11,7 @@ import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/custom_sound_service.dart';
 import 'package:alarm_app/services/file_picker_service.dart';
 import 'package:alarm_app/services/home_widget_service.dart';
+import 'package:alarm_app/services/lockscreen_service.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/sound_preview_service.dart';
 import 'package:alarm_app/services/storage_service.dart';
@@ -31,6 +32,9 @@ final schedulerServiceProvider =
 
 final permissionServiceProvider =
     Provider<PermissionService>((ref) => PermissionService());
+
+final lockscreenServiceProvider =
+    Provider<LockscreenService>((ref) => LockscreenService());
 
 final updateServiceProvider = Provider<UpdateService>((ref) => UpdateService());
 

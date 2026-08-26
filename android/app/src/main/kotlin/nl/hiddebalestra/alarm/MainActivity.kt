@@ -1,18 +1,23 @@
 package nl.hiddebalestra.alarm
 
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-/// Bridges the one thing `permission_handler` doesn't cover: Android 14+'s
-/// USE_FULL_SCREEN_INTENT runtime toggle, which gates whether the alarm can
-/// actually take over the screen (incl. over the lock screen) instead of
-/// just showing a normal heads-up notification.
+/// Bridges two things the `alarm` plugin and `permission_handler` don't cover:
+/// Android 14+'s USE_FULL_SCREEN_INTENT runtime toggle, and forcing this
+/// Activity to actually show over the lock screen (and wake the display)
+/// while an alarm/timer is ringing. The plugin re-launches this same
+/// launcher Activity via a full-screen-intent PendingIntent, but without
+/// show-when-locked/turn-screen-on the OS can leave the screen off/locked on
+/// many devices even though the Activity technically started.
 class MainActivity : FlutterActivity() {
     private val channelName = "nl.hiddebalestra.alarm/full_screen_intent"
 
@@ -25,8 +30,52 @@ class MainActivity : FlutterActivity() {
                     openFullScreenIntentSettings()
                     result.success(null)
                 }
+                "showOverLockscreen" -> {
+                    showOverLockscreen()
+                    result.success(null)
+                }
+                "restoreLockscreen" -> {
+                    restoreLockscreen()
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    /// Called right before the ringing screen is shown, so it's visible and
+    /// usable even when the device was fully locked/asleep.
+    private fun showOverLockscreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val keyguardManager = getSystemService(KeyguardManager::class.java)
+            keyguardManager?.requestDismissKeyguard(this, null)
+        }
+    }
+
+    /// Called once the ringing screen is dismissed, so the app doesn't keep
+    /// bypassing the lock screen outside of an actual alarm/timer ringing.
+    private fun restoreLockscreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(false)
+            setTurnScreenOn(false)
+        } else {
+            @Suppress("DEPRECATION")
+            window.clearFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
         }
     }
 
