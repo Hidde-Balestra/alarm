@@ -139,11 +139,33 @@
 
   "settingsHistorySection": "History",
   "viewHistoryAction": "View alarm & timer history",
+  "viewStatsAction": "View alarm statistics",
   "historyScreenTitle": "History",
   "historyEmptyTitle": "Nothing here yet",
   "historyActionRang": "Rang",
   "historyActionSnoozed": "Snoozed",
   "historyActionDismissed": "Dismissed",
+  "historyActionMissed": "Missed",
+
+  "statsScreenTitle": "Statistics",
+  "statsSubtitle": "Based on your most recent alarm activity",
+  "statsEmptyTitle": "No alarm activity yet",
+  "statsRangCount": "Times rung",
+  "statsDismissedWithoutSnooze": "Dismissed without snoozing",
+  "statsTotalSnoozes": "Total snoozes",
+  "statsAverageTimeToDismiss": "Average time to dismiss",
+  "statsMissedCount": "Missed",
+
+  "settingsBackupSection": "Backup",
+  "settingsBackupSubtitle": "Export your alarms to a file, or restore them on another device",
+  "backupExportAction": "Export",
+  "backupImportAction": "Import",
+  "backupExportedMessage": "Alarms exported",
+  "backupImportedMessage": "Alarms imported: {count}",
+  "@backupImportedMessage": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "backupImportFailedMessage": "Couldn't read that file — is it a valid alarm backup?",
 
   "settingsPermissionsSection": "Reliability",
   "settingsPermissionsSubtitle": "So your alarm doesn't get silenced or killed by the system",

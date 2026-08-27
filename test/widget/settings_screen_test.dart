@@ -1,6 +1,13 @@
+import 'dart:convert';
+
+import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_settings.dart';
+import 'package:alarm_app/models/backup_data.dart';
+import 'package:alarm_app/models/history_entry.dart';
 import 'package:alarm_app/providers/providers.dart';
+import 'package:alarm_app/screens/history/stats_screen.dart';
 import 'package:alarm_app/screens/settings/settings_screen.dart';
+import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/update_service.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_alarm_scheduler_service.dart';
+import '../fakes/fake_backup_service.dart';
 import '../fakes/fake_permission_service.dart';
 import '../fakes/fake_update_service.dart';
 import '../test_utils.dart';
@@ -239,5 +247,95 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('History'), findsWidgets);
+  });
+
+  testWidgets('tapping the stats row opens the stats screen', (tester) async {
+    await pumpApp(tester, const SettingsScreen());
+
+    await tester.tap(find.text('View alarm statistics'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StatsScreen), findsOneWidget);
+  });
+
+  testWidgets('shows a badge on the history row when there is a missed alarm', (tester) async {
+    final rangAt = DateTime.now().subtract(const Duration(hours: 1));
+    final entry = HistoryEntry(
+      id: '1',
+      kind: RingingKind.alarm,
+      refId: 'a1',
+      action: HistoryAction.rang,
+      timestamp: rangAt,
+    );
+    await pumpApp(
+      tester,
+      const SettingsScreen(),
+      initialPrefs: {'history': jsonEncode([entry.toJson()])},
+    );
+
+    final historyTile = tester.widget<ListTile>(
+      find.ancestor(of: find.text('View alarm & timer history'), matching: find.byType(ListTile)),
+    );
+    expect(historyTile.trailing, isA<Icon>());
+    expect((historyTile.trailing as Icon).icon, Icons.circle);
+  });
+
+  testWidgets('exporting alarms calls the backup service with the current alarms', (tester) async {
+    const alarm = Alarm(id: 'a1', hour: 7, minute: 0);
+    final fakeBackup = FakeBackupService();
+    await pumpApp(
+      tester,
+      const SettingsScreen(),
+      overrides: [backupServiceProvider.overrideWithValue(fakeBackup)],
+      initialPrefs: {
+        'alarms': jsonEncode([alarm.toJson()]),
+      },
+    );
+
+    await tester.tap(find.text('Export'));
+    await tester.pumpAndSettle();
+
+    expect(fakeBackup.exportCallCount, 1);
+    expect(BackupData.fromJsonString(fakeBackup.lastExportedJson!).alarms.single.id, 'a1');
+    expect(find.text('Alarms exported'), findsOneWidget);
+  });
+
+  testWidgets('importing a valid backup adds alarms and shows how many', (tester) async {
+    const imported = Alarm(id: 'imported', hour: 6, minute: 30);
+    final fakeBackup = FakeBackupService()
+      ..importContent = BackupData(alarms: const [imported]).toJsonString();
+    late ProviderContainer container;
+    await pumpApp(
+      tester,
+      Consumer(
+        builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const SettingsScreen();
+        },
+      ),
+      overrides: [backupServiceProvider.overrideWithValue(fakeBackup)],
+    );
+
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alarms imported: 1'), findsOneWidget);
+    final alarms = container.read(alarmsProvider).valueOrNull ?? [];
+    expect(alarms, hasLength(1));
+    expect(alarms.single.hour, 6);
+  });
+
+  testWidgets('importing an invalid file shows an error instead of crashing', (tester) async {
+    final fakeBackup = FakeBackupService()..importContent = 'not valid json';
+    await pumpApp(
+      tester,
+      const SettingsScreen(),
+      overrides: [backupServiceProvider.overrideWithValue(fakeBackup)],
+    );
+
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('valid alarm backup'), findsOneWidget);
   });
 }

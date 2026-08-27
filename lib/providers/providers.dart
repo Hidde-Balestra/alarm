@@ -8,6 +8,7 @@ import 'package:alarm_app/models/history_entry.dart';
 import 'package:alarm_app/models/stopwatch_state.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
+import 'package:alarm_app/services/backup_service.dart';
 import 'package:alarm_app/services/custom_sound_service.dart';
 import 'package:alarm_app/services/file_picker_service.dart';
 import 'package:alarm_app/services/home_widget_service.dart';
@@ -44,6 +45,8 @@ final customSoundServiceProvider =
 final filePickerServiceProvider = Provider<FilePickerService>((ref) => FilePickerService());
 
 final homeWidgetServiceProvider = Provider<HomeWidgetService>((ref) => HomeWidgetService());
+
+final backupServiceProvider = Provider<BackupService>((ref) => BackupService());
 
 final soundPreviewServiceProvider =
     Provider<SoundPreviewService>((ref) => SoundPreviewService());
@@ -236,6 +239,24 @@ class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
   /// Undoes [skipNext].
   Future<void> unskipNext(String id) =>
       _updateOne(id, (a) => a.copyWith(clearSkippedOccurrence: true));
+
+  /// Adds [imported] alongside the current alarms rather than replacing
+  /// them, each with a freshly generated id (and reset snooze/skip state)
+  /// so a backup restore can never collide with — or silently overwrite —
+  /// alarms already on this device. Returns how many were added.
+  Future<int> importAlarms(List<Alarm> imported) async {
+    final current = await future;
+    final withFreshIds = [
+      for (final a in imported)
+        a.copyWith(
+          id: newAlarmId(),
+          snoozeCount: 0,
+          clearSkippedOccurrence: true,
+        ),
+    ];
+    await _persist(_sorted([...current, ...withFreshIds]));
+    return withFreshIds.length;
+  }
 }
 
 final alarmsProvider = AsyncNotifierProvider<AlarmsNotifier, List<Alarm>>(AlarmsNotifier.new);

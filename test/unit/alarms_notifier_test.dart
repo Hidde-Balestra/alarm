@@ -72,4 +72,29 @@ void main() {
 
     expect(alarms.single.skippedOccurrence, isNull);
   });
+
+  test('importAlarms adds alarms alongside existing ones with fresh ids', () async {
+    final notifier = container.read(alarmsProvider.notifier);
+    const existing = Alarm(id: 'existing', hour: 7, minute: 0);
+    await notifier.upsert(existing);
+
+    final imported = Alarm(
+      id: 'existing', // deliberately colliding with the id already on this device
+      hour: 8,
+      minute: 15,
+      snoozeCount: 3,
+      skippedOccurrence: DateTime(2026, 7, 22, 8, 15),
+    );
+    final count = await notifier.importAlarms([imported]);
+
+    expect(count, 1);
+    final alarms = container.read(alarmsProvider).valueOrNull ?? [];
+    expect(alarms, hasLength(2));
+    final newOne = alarms.firstWhere((a) => a.id != 'existing');
+    expect(newOne.hour, 8);
+    expect(newOne.minute, 15);
+    // Ephemeral/per-device state must not carry over from the backup.
+    expect(newOne.snoozeCount, 0);
+    expect(newOne.skippedOccurrence, isNull);
+  });
 }

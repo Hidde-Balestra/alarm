@@ -16,9 +16,11 @@ A Flutter alarm clock & timer app for Android and iOS, built for reliability: al
 - A configurable max number of snoozes per alarm.
 - "Skip next occurrence" on a repeating alarm, for a one-off day off without disabling it.
 - A manual "pause all alarms" mode for e.g. a holiday, without losing each alarm's individual on/off state.
-- An Android homescreen widget showing the next upcoming alarm.
+- An Android homescreen widget showing the next upcoming alarm (tap to open the app).
 - A bedtime card on the Alarms screen, computed from your first alarm tomorrow and a configurable desired sleep duration.
-- A history log of when alarms/timers rang, got snoozed, or were dismissed.
+- A history log of when alarms/timers rang, got snoozed, or were dismissed — with rings that were never snoozed or dismissed flagged as missed.
+- A statistics screen summarizing recent alarm activity (times rung, snooze counts, average time to dismiss, missed alarms).
+- Export/import your alarms as a JSON file, to back them up or move them to another device.
 
 ## Reliability notes
 
@@ -63,10 +65,11 @@ Without that file, release builds fall back to debug signing so `flutter build a
 
 ```
 lib/
-  models/       Alarm, RepeatRule (incl. the biweekly logic), TimerSession, AppSettings, HistoryEntry
-  services/      OS alarm scheduling, local storage, permissions, homescreen widget push
+  models/       Alarm, RepeatRule (incl. the biweekly logic), TimerSession, AppSettings, HistoryEntry,
+                 missed-alarm detection, alarm stats, backup (de)serialization
+  services/      OS alarm scheduling, local storage, permissions, homescreen widget push, backup file I/O
   providers/     Riverpod state (alarms, timers, settings, history)
-  screens/       Alarms, Timer, Settings, History, and the full-screen ringing UI
+  screens/       Alarms, Timer, Settings, History, Statistics, and the full-screen ringing UI
   widgets/       Shared UI pieces (weekday picker, formatting helpers)
   l10n/          ARB translation source files (English is the template)
 android/app/src/main/kotlin/.../AlarmWidgetProvider.kt

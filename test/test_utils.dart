@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes/fake_alarm_scheduler_service.dart';
+import 'fakes/fake_backup_service.dart';
 import 'fakes/fake_custom_sound_service.dart';
 import 'fakes/fake_file_picker_service.dart';
 import 'fakes/fake_home_widget_service.dart';
@@ -49,6 +50,7 @@ Future<void> pumpApp(
         customSoundServiceProvider.overrideWithValue(FakeCustomSoundService()),
         filePickerServiceProvider.overrideWithValue(const FakeFilePickerService()),
         homeWidgetServiceProvider.overrideWithValue(FakeHomeWidgetService()),
+        backupServiceProvider.overrideWithValue(FakeBackupService()),
         // Avoids a real periodic Timer leaking past test teardown.
         clockProvider.overrideWith((ref) => Stream.value(DateTime.now())),
         ...overrides,

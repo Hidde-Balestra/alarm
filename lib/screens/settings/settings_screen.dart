@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/app_settings.dart';
+import 'package:alarm_app/models/backup_data.dart';
+import 'package:alarm_app/models/missed_alarms.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/history/history_screen.dart';
+import 'package:alarm_app/screens/history/stats_screen.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/update_service.dart';
 import 'package:alarm_app/widgets/sound_selector_tile.dart';
@@ -66,6 +69,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider).valueOrNull ?? const AppSettings();
     final notifier = ref.read(settingsProvider.notifier);
+    final history = ref.watch(historyProvider).valueOrNull ?? const [];
+    final hasMissedAlarms = missedEntries(history).isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navSettings)),
@@ -215,11 +220,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
           ListTile(
             leading: const Icon(Icons.history),
             title: Text(l10n.viewHistoryAction),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: hasMissedAlarms
+                ? Icon(Icons.circle, color: Theme.of(context).colorScheme.error, size: 10)
+                : const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const HistoryScreen()),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart_outlined),
+            title: Text(l10n.viewStatsAction),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StatsScreen()),
+            ),
+          ),
+          const Divider(),
+          _SectionHeader(
+              title: l10n.settingsBackupSection, subtitle: l10n.settingsBackupSubtitle),
+          const _BackupSection(),
           const Divider(),
           _SectionHeader(title: l10n.settingsPermissionsSection, subtitle: l10n.settingsPermissionsSubtitle),
           _PermissionTile(
@@ -348,6 +367,73 @@ class _UpdatesSectionState extends ConsumerState<_UpdatesSection> {
       onTap: () => ref
           .read(updateServiceProvider)
           .openReleasePage(_result?.releaseUrl ?? UpdateService.releasesUrl),
+    );
+  }
+}
+
+class _BackupSection extends ConsumerWidget {
+  const _BackupSection();
+
+  Future<void> _export(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final alarms = ref.read(alarmsProvider).valueOrNull ?? const [];
+    final json = BackupData(alarms: alarms).toJsonString();
+    final saved = await ref.read(backupServiceProvider).exportToFile(json);
+    if (!context.mounted || !saved) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.backupExportedMessage)),
+    );
+  }
+
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final content = await ref.read(backupServiceProvider).importFromFile();
+    if (content == null) return;
+    if (!context.mounted) return;
+
+    int imported;
+    try {
+      final data = BackupData.fromJsonString(content);
+      imported = await ref.read(alarmsProvider.notifier).importAlarms(data.alarms);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.backupImportFailedMessage)),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.backupImportedMessage(imported))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _export(context, ref),
+              icon: const Icon(Icons.upload_outlined),
+              label: Text(l10n.backupExportAction),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _import(context, ref),
+              icon: const Icon(Icons.download_outlined),
+              label: Text(l10n.backupImportAction),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
