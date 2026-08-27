@@ -283,14 +283,23 @@ void main() {
   testWidgets('exporting alarms calls the backup service with the current alarms', (tester) async {
     const alarm = Alarm(id: 'a1', hour: 7, minute: 0);
     final fakeBackup = FakeBackupService();
+    late ProviderContainer container;
     await pumpApp(
       tester,
-      const SettingsScreen(),
+      Consumer(
+        builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const SettingsScreen();
+        },
+      ),
       overrides: [backupServiceProvider.overrideWithValue(fakeBackup)],
       initialPrefs: {
         'alarms': jsonEncode([alarm.toJson()]),
       },
     );
+    // Guarantees alarmsProvider has actually resolved from storage before
+    // tapping Export, rather than relying on pumpAndSettle's timing.
+    await container.read(alarmsProvider.notifier).future;
 
     await tester.tap(find.text('Export'));
     await tester.pumpAndSettle();
