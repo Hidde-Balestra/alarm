@@ -13,9 +13,9 @@ import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/alarm_sync_coordinator.dart';
 import 'package:alarm_app/services/home_widget_service.dart';
 import 'package:alarm_app/theme.dart';
-import 'package:alarm_app/widgets/format_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
@@ -35,6 +35,16 @@ Locale resolveEffectiveLocale(AppSettings settings) {
   return const Locale('en');
 }
 
+/// Formats a time-of-day for the homescreen widget. Deliberately
+/// context-free (unlike `formatTimeOfDay`, which needs `MaterialLocalizations`
+/// via `BuildContext`): this runs from `syncNow`, called from a `ref.listen`
+/// callback registered on `AlarmApp` itself — a context above `MaterialApp`
+/// in the tree, where `Localizations.of` can't resolve anything.
+String _formatWidgetTime(int hour, int minute, Locale locale) {
+  final time = DateTime(2000, 1, 1, hour, minute);
+  return DateFormat.jm(locale.toString()).format(time);
+}
+
 class AlarmApp extends ConsumerStatefulWidget {
   const AlarmApp({super.key});
 
@@ -46,6 +56,11 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
   StreamSubscription<plugin.AlarmSet>? _ringingSub;
   bool _showingRingScreen = false;
   bool _initStarted = false;
+
+  /// Ids of alarms the OS currently reports as ringing — kept out of
+  /// `syncNow`'s re-scheduling pass. See `syncAlarmsWithScheduler`'s
+  /// `ringingAlarmIds` doc for why that matters.
+  Set<String> _ringingAlarmIds = const {};
 
   void _ensureInit() {
     if (_initStarted) return;
@@ -60,6 +75,12 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
   }
 
   void _onRingingChanged(plugin.AlarmSet alarmSet) {
+    _ringingAlarmIds = {
+      for (final settings in alarmSet.alarms)
+        if (RingingRef.tryDecode(settings.payload) case RingingRef(kind: RingingKind.alarm, :final refId))
+          refId,
+    };
+
     if (_showingRingScreen || alarmSet.alarms.isEmpty) return;
     final settings = alarmSet.alarms.first;
     final ringingRef = RingingRef.tryDecode(settings.payload);
@@ -132,6 +153,7 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
           scheduler: ref.read(schedulerServiceProvider),
           l10n: lookupAppLocalizations(locale),
           paused: paused,
+          ringingAlarmIds: _ringingAlarmIds,
         ),
       );
 
@@ -139,7 +161,7 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
       unawaited(
         ref.read(homeWidgetServiceProvider).updateNextAlarm(
               timeText: upcoming != null
-                  ? formatTimeOfDay(context, upcoming.alarm.hour, upcoming.alarm.minute)
+                  ? _formatWidgetTime(upcoming.alarm.hour, upcoming.alarm.minute, locale)
                   : null,
               labelText: upcoming?.alarm.label,
             ),

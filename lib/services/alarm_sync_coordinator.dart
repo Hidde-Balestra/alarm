@@ -17,16 +17,26 @@ import 'package:alarm_app/services/alarm_scheduler_service.dart';
 /// cancelled at the OS level regardless of its own `enabled` flag — but that
 /// flag itself is left untouched, so turning the pause back off restores
 /// exactly the alarms that were on before.
+///
+/// Alarms whose id is in [ringingAlarmIds] are left completely untouched:
+/// re-scheduling a currently-ringing alarm computes its *next* occurrence
+/// (since "now" is already past today's trigger) and replaces the native
+/// alarm with that — which can cut short the alarm that's actively ringing.
+/// This matters because a sync can be triggered by the app cold-starting
+/// (right as it's launched by that very alarm's full-screen intent), so
+/// without this guard a fresh app launch could silence its own alarm.
 Future<void> syncAlarmsWithScheduler({
   required List<Alarm> alarms,
   required List<CustomSound> customSounds,
   required AlarmSchedulerService scheduler,
   required AppLocalizations l10n,
   bool paused = false,
+  Set<String> ringingAlarmIds = const {},
   DateTime? now,
 }) async {
   final from = now ?? DateTime.now();
   for (final alarm in alarms) {
+    if (ringingAlarmIds.contains(alarm.id)) continue;
     if (paused) {
       await scheduler.cancelAlarm(alarm.id);
       continue;
