@@ -11,7 +11,6 @@ import 'package:alarm_app/screens/home_shell.dart';
 import 'package:alarm_app/screens/ringing/ringing_screen.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/alarm_sync_coordinator.dart';
-import 'package:alarm_app/services/home_widget_service.dart';
 import 'package:alarm_app/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
