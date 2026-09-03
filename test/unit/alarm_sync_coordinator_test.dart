@@ -28,7 +28,7 @@ void main() {
   });
 
   test('does not touch an alarm that is currently ringing', () async {
-    final scheduler = FakeAlarmSchedulerService();
+    final scheduler = FakeAlarmSchedulerService()..ringingIds.add('a1');
     const alarms = [
       Alarm(id: 'a1', hour: 7, minute: 0, repeat: RepeatRule.daily()),
       Alarm(id: 'a2', hour: 8, minute: 0, repeat: RepeatRule.daily()),
@@ -39,7 +39,6 @@ void main() {
       customSounds: const [],
       scheduler: scheduler,
       l10n: l10n,
-      ringingAlarmIds: const {'a1'},
     );
 
     expect(scheduler.scheduledAlarmIds, ['a2']);
@@ -47,7 +46,7 @@ void main() {
   });
 
   test('paused mode cancels non-ringing alarms but still leaves a ringing one alone', () async {
-    final scheduler = FakeAlarmSchedulerService();
+    final scheduler = FakeAlarmSchedulerService()..ringingIds.add('a1');
     const alarms = [
       Alarm(id: 'a1', hour: 7, minute: 0, repeat: RepeatRule.daily()),
       Alarm(id: 'a2', hour: 8, minute: 0, repeat: RepeatRule.daily()),
@@ -59,7 +58,6 @@ void main() {
       scheduler: scheduler,
       l10n: l10n,
       paused: true,
-      ringingAlarmIds: const {'a1'},
     );
 
     expect(scheduler.cancelledAlarmIds, ['a2']);

@@ -56,11 +56,6 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
   bool _showingRingScreen = false;
   bool _initStarted = false;
 
-  /// Ids of alarms the OS currently reports as ringing — kept out of
-  /// `syncNow`'s re-scheduling pass. See `syncAlarmsWithScheduler`'s
-  /// `ringingAlarmIds` doc for why that matters.
-  Set<String> _ringingAlarmIds = const {};
-
   void _ensureInit() {
     if (_initStarted) return;
     _initStarted = true;
@@ -74,12 +69,6 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
   }
 
   void _onRingingChanged(plugin.AlarmSet alarmSet) {
-    _ringingAlarmIds = {
-      for (final settings in alarmSet.alarms)
-        if (RingingRef.tryDecode(settings.payload) case RingingRef(kind: RingingKind.alarm, :final refId))
-          refId,
-    };
-
     if (_showingRingScreen || alarmSet.alarms.isEmpty) return;
     final settings = alarmSet.alarms.first;
     final ringingRef = RingingRef.tryDecode(settings.payload);
@@ -152,7 +141,6 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
           scheduler: ref.read(schedulerServiceProvider),
           l10n: lookupAppLocalizations(locale),
           paused: paused,
-          ringingAlarmIds: _ringingAlarmIds,
         ),
       );
 
