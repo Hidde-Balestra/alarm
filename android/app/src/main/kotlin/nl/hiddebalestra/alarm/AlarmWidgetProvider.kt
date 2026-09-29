@@ -1,7 +1,9 @@
 package nl.hiddebalestra.alarm
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.view.View
 import android.widget.RemoteViews
@@ -35,8 +37,25 @@ class AlarmWidgetProvider : HomeWidgetProvider() {
                         setTextViewText(R.id.widget_alarm_label, label)
                     }
                 }
+                setOnClickPendingIntent(R.id.widget_root, openAppPendingIntent(context, widgetId))
             }
             appWidgetManager.updateAppWidget(widgetId, views)
         }
+    }
+
+    /// Tapping the widget just opens the app — no in-widget snooze/dismiss
+    /// actions (that would need a background-isolate callback and a
+    /// broadcast receiver, a lot more native surface for something that
+    /// can't be verified on a device from here).
+    private fun openAppPendingIntent(context: Context, widgetId: Int): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context,
+            widgetId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 }

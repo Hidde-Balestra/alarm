@@ -11,11 +11,18 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
   final List<String> scheduledTimerIds = [];
   final List<String> cancelledTimerIds = [];
 
+  /// Alarm ids tests can mark as "currently ringing" to verify callers
+  /// leave them alone — see `AlarmSchedulerService.isRinging`.
+  final Set<String> ringingIds = {};
+
   @override
   Future<void> init() async {}
 
   @override
   Stream<AlarmSet> get ringing => const Stream.empty();
+
+  @override
+  Future<bool> isRinging(String alarmId) async => ringingIds.contains(alarmId);
 
   @override
   Future<void> scheduleNext(
@@ -26,6 +33,7 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
     required String notificationBody,
     required String stopButtonLabel,
   }) async {
+    if (ringingIds.contains(alarm.id)) return;
     final next = alarm.enabled ? alarm.nextOccurrence(from) : null;
     if (next == null) {
       cancelledAlarmIds.add(alarm.id);

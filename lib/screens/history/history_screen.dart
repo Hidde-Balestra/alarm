@@ -1,5 +1,6 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:alarm_app/models/history_entry.dart';
+import 'package:alarm_app/models/missed_alarms.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:flutter/material.dart';
@@ -59,10 +60,18 @@ class HistoryScreen extends ConsumerWidget {
                   entry.kind == RingingKind.alarm ? l10n.navAlarms : l10n.navTimer;
               final title = entry.label.isEmpty ? defaultLabel : entry.label;
               final timestamp = DateFormat.MMMEd(locale).add_Hms().format(entry.timestamp);
+              final missed = isMissed(entry, entries);
+              final errorColor = Theme.of(context).colorScheme.error;
               return ListTile(
-                leading: Icon(_actionIcon(entry.action)),
+                leading: Icon(
+                  missed ? Icons.notifications_off_outlined : _actionIcon(entry.action),
+                  color: missed ? errorColor : null,
+                ),
                 title: Text(title),
-                subtitle: Text('${_actionLabel(l10n, entry.action)} • $timestamp'),
+                subtitle: Text(
+                  '${missed ? l10n.historyActionMissed : _actionLabel(l10n, entry.action)} • $timestamp',
+                  style: missed ? TextStyle(color: errorColor) : null,
+                ),
               );
             },
           );

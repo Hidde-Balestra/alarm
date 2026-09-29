@@ -46,6 +46,16 @@ class AlarmSchedulerService {
   int _numericId(RingingKind kind, String refId) =>
       ('${kind.name}-$refId').hashCode & 0x7fffffff;
 
+  /// Whether [alarmId] is *currently* ringing, per a fresh, authoritative
+  /// query to the plugin — not Dart-side tracked state. That distinction
+  /// matters: tracking "is this ringing" from the `ringing` stream in Dart
+  /// has a bootstrapping race on a cold start caused by the alarm's own
+  /// full-screen intent (the alarms list can finish loading, and trigger a
+  /// sync, before the stream subscription is even attached). Querying the
+  /// plugin directly at the moment of the decision has no such window.
+  Future<bool> isRinging(String alarmId) =>
+      plugin.Alarm.isRinging(_numericId(RingingKind.alarm, alarmId));
+
   /// Full volume immediately, or a gradual fade-in over [rampSeconds] if
   /// set — lets an alarm ease someone awake instead of blasting instantly.
   plugin.VolumeSettings _volumeSettings(int rampSeconds) {
@@ -75,6 +85,11 @@ class AlarmSchedulerService {
   /// Schedules [alarm]'s next occurrence, replacing whatever was previously
   /// scheduled for it. Cancels instead if the alarm is disabled or has no
   /// future occurrence.
+  ///
+  /// Does nothing at all if [alarm] is currently ringing: replacing a
+  /// ringing alarm's native schedule (even with an equivalent one) stops
+  /// the live ring — see [isRinging]. A ringing alarm gets its next
+  /// schedule the normal way once it's actually dismissed or snoozed.
   Future<void> scheduleNext(
     model.Alarm alarm, {
     required DateTime from,
@@ -83,6 +98,7 @@ class AlarmSchedulerService {
     required String notificationBody,
     required String stopButtonLabel,
   }) async {
+    if (await isRinging(alarm.id)) return;
     final next = alarm.enabled ? alarm.effectiveNextOccurrence(from) : null;
     if (next == null) {
       await cancelAlarm(alarm.id);
