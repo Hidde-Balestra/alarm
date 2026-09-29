@@ -75,6 +75,10 @@
 
   "alarmRingingTitle": "Alarm",
   "timerFinishedTitle": "Timer finished",
+  "alarmReminderTitle": "Alarm in {minutes} min",
+  "@alarmReminderTitle": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
   "dismiss": "Dismiss",
   "snooze": "Snooze",
   "snoozedFor": "Snoozed for {minutes} min",

@@ -13,6 +13,7 @@ import 'package:alarm_app/services/file_picker_service.dart';
 import 'package:alarm_app/services/home_widget_service.dart';
 import 'package:alarm_app/services/lockscreen_service.dart';
 import 'package:alarm_app/services/permission_service.dart';
+import 'package:alarm_app/services/reminder_notification_service.dart';
 import 'package:alarm_app/services/sound_preview_service.dart';
 import 'package:alarm_app/services/storage_service.dart';
 import 'package:alarm_app/services/update_service.dart';
@@ -35,6 +36,9 @@ final permissionServiceProvider =
 
 final lockscreenServiceProvider =
     Provider<LockscreenService>((ref) => LockscreenService());
+
+final reminderNotificationServiceProvider =
+    Provider<ReminderNotificationService>((ref) => ReminderNotificationService());
 
 final updateServiceProvider = Provider<UpdateService>((ref) => UpdateService());
 

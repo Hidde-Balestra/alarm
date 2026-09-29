@@ -3,6 +3,7 @@ import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_sound.dart';
 import 'package:alarm_app/models/custom_sound.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
+import 'package:alarm_app/services/reminder_notification_service.dart';
 
 /// Pushes the current in-app alarm list to the OS-level scheduler.
 ///
@@ -38,6 +39,38 @@ Future<void> syncAlarmsWithScheduler({
       notificationTitle: l10n.alarmRingingTitle,
       notificationBody: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
       stopButtonLabel: l10n.dismiss,
+    );
+  }
+}
+
+/// Pushes the current in-app alarm list to the reminder notifications, the
+/// same way [syncAlarmsWithScheduler] does for the real OS-level alarm: a
+/// quiet heads-up [reminderLeadTime] before each alarm's next occurrence,
+/// with a "skip once" action. Safe to call any time the alarm list changes.
+Future<void> syncReminderNotifications({
+  required List<Alarm> alarms,
+  required ReminderNotificationService reminders,
+  required AppLocalizations l10n,
+  bool paused = false,
+  DateTime? now,
+}) async {
+  final from = now ?? DateTime.now();
+  for (final alarm in alarms) {
+    if (paused || !alarm.enabled) {
+      await reminders.cancelReminder(alarm.id);
+      continue;
+    }
+    final next = alarm.effectiveNextOccurrence(from);
+    if (next == null) {
+      await reminders.cancelReminder(alarm.id);
+      continue;
+    }
+    await reminders.scheduleReminder(
+      alarmId: alarm.id,
+      occurrence: next,
+      title: l10n.alarmReminderTitle(reminderLeadTime.inMinutes),
+      body: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
+      skipActionLabel: l10n.skipNextAction,
     );
   }
 }

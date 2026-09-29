@@ -63,6 +63,10 @@
 
   "alarmRingingTitle": "Wekker",
   "timerFinishedTitle": "Timer afgelopen",
+  "alarmReminderTitle": "Wekker over {minutes} min",
+  "@alarmReminderTitle": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
   "dismiss": "Stoppen",
   "snooze": "Sluimeren",
   "snoozedFor": "Sluimert {minutes} min",

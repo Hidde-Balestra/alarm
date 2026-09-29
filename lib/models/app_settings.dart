@@ -1,8 +1,25 @@
+import 'dart:ui' as ui;
+
+import 'package:alarm_app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Supported app languages. `system` follows the device locale, falling back
 /// to English if the device language isn't Dutch or English.
 enum AppLanguage { system, dutch, english }
+
+/// Resolves [settings]' language choice to a concrete [Locale]: the chosen
+/// one, or (for "system") the device locale if supported, else English.
+Locale resolveEffectiveLocale(AppSettings settings) {
+  final requested = settings.locale;
+  if (requested != null) return requested;
+  final deviceLocale = ui.PlatformDispatcher.instance.locale;
+  final supported =
+      AppLocalizations.supportedLocales.map((l) => l.languageCode).toSet();
+  if (supported.contains(deviceLocale.languageCode)) {
+    return Locale(deviceLocale.languageCode);
+  }
+  return const Locale('en');
+}
 
 class AppSettings {
   final ThemeMode themeMode;

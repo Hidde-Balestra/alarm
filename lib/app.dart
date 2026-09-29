@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:alarm/utils/alarm_set.dart' as plugin;
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
@@ -22,19 +21,6 @@ const _uuid = Uuid();
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-Locale resolveEffectiveLocale(AppSettings settings) {
-  final requested = settings.locale;
-  if (requested != null) return requested;
-  final deviceLocale = ui.PlatformDispatcher.instance.locale;
-  final supported = AppLocalizations.supportedLocales
-      .map((l) => l.languageCode)
-      .toSet();
-  if (supported.contains(deviceLocale.languageCode)) {
-    return Locale(deviceLocale.languageCode);
-  }
-  return const Locale('en');
-}
-
 class AlarmApp extends ConsumerStatefulWidget {
   const AlarmApp({super.key});
 
@@ -56,6 +42,7 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
   Future<void> _init() async {
     final scheduler = ref.read(schedulerServiceProvider);
     await scheduler.init();
+    await ref.read(reminderNotificationServiceProvider).init();
     _ringingSub = scheduler.ringing.listen(_onRingingChanged);
   }
 
@@ -79,6 +66,10 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     // Guarantees the ringing screen is visible/usable even if the device was
     // fully locked and asleep when the alarm fired — see LockscreenService.
     unawaited(ref.read(lockscreenServiceProvider).showOverLockscreen());
+    if (ringingRef.kind == RingingKind.alarm) {
+      // The reminder notification's job is done once the alarm itself rings.
+      unawaited(ref.read(reminderNotificationServiceProvider).cancelReminder(ringingRef.refId));
+    }
     navigatorKey.currentState
         ?.push(
           MaterialPageRoute(
@@ -130,6 +121,14 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
           alarms: alarms,
           customSounds: customSounds,
           scheduler: ref.read(schedulerServiceProvider),
+          l10n: lookupAppLocalizations(locale),
+          paused: paused,
+        ),
+      );
+      unawaited(
+        syncReminderNotifications(
+          alarms: alarms,
+          reminders: ref.read(reminderNotificationServiceProvider),
           l10n: lookupAppLocalizations(locale),
           paused: paused,
         ),
