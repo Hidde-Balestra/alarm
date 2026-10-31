@@ -38,7 +38,7 @@ Future<void> pumpApp(
 
   // Tall surface so long scrollable screens (e.g. Settings) render every
   // item's Element instead of leaving off-screen ones un-mounted.
-  await tester.binding.setSurfaceSize(const Size(420, 4200));
+  await tester.binding.setSurfaceSize(const Size(420, 6000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await tester.pumpWidget(

@@ -39,6 +39,10 @@
   "soundClassic": "Classic",
   "soundDigital": "Digital",
   "soundGentle": "Gentle",
+  "soundChimes": "Wind chimes",
+  "soundHarp": "Harp",
+  "soundOcean": "Ocean waves",
+  "soundSunrise": "Sunrise",
   "soundSiren": "Siren",
   "soundsScreenTitle": "Sounds",
   "customSoundsSectionTitle": "Uploaded sounds",
@@ -210,5 +214,89 @@
   },
   "updateCheckFailedLabel": "Couldn't check for updates",
   "updateViewReleaseButton": "View release",
-  "updateCheckNowButton": "Check now"
+  "updateCheckNowButton": "Check now",
+
+  "optionOff": "Off",
+  "wakeUpSectionTitle": "Waking up",
+  "sunriseLabel": "Sunrise light",
+  "sunriseHint": "Before the alarm, the screen slowly brightens from dark to warm light",
+  "sunriseMinutesBefore": "{minutes} min before",
+  "@sunriseMinutesBefore": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "wakeUpCheckLabel": "\"Are you awake?\" check",
+  "wakeUpCheckHint": "After dismissing you'll be asked to confirm you're up. If you don't within {minutes} minutes, the alarm rings again.",
+  "@wakeUpCheckHint": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "goodMorningLabel": "Good-morning screen",
+  "goodMorningHint": "After dismissing, show the date, your streak and a thought for the day",
+  "skipHolidaysLabel": "Skip public holidays",
+  "skipHolidaysHint": "Stays silent on Dutch public holidays like King's Day and Christmas",
+  "holidaySkippedLabel": "{holiday}: skipped (public holiday)",
+  "@holidaySkippedLabel": {
+    "placeholders": {"holiday": {"type": "String"}}
+  },
+  "holidayNewYearsDay": "New Year's Day",
+  "holidayEasterSunday": "Easter Sunday",
+  "holidayEasterMonday": "Easter Monday",
+  "holidayKingsDay": "King's Day",
+  "holidayLiberationDay": "Liberation Day",
+  "holidayAscensionDay": "Ascension Day",
+  "holidayWhitSunday": "Whit Sunday",
+  "holidayWhitMonday": "Whit Monday",
+  "holidayChristmasDay": "Christmas Day",
+  "holidayBoxingDay": "Boxing Day",
+  "sunriseTitle": "Sunrise",
+  "sunriseAlarmAt": "Alarm at {time}",
+  "@sunriseAlarmAt": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "sunriseClose": "Close",
+  "sunriseAlreadyAwake": "I'm up, skip this alarm",
+  "wakeCheckPromptTitle": "Are you awake?",
+  "wakeCheckPromptBody": "Tap \"I'm awake\", or the alarm rings again in {minutes} min",
+  "@wakeCheckPromptBody": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "wakeCheckAwakeAction": "I'm awake",
+  "wakeCheckRingingTitle": "Still asleep?",
+  "wakeCheckBanner": "Are you awake? Confirm before {time}",
+  "@wakeCheckBanner": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "goodMorningWakeCheckNote": "In {minutes} min we'll check you're really up",
+  "@goodMorningWakeCheckNote": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "greetingMorning": "Good morning",
+  "greetingAfternoon": "Good afternoon",
+  "greetingEvening": "Good evening",
+  "goodMorningStreak": "{count} alarms in a row without snoozing",
+  "@goodMorningStreak": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "goodMorningNextAlarm": "Next alarm: {when}",
+  "@goodMorningNextAlarm": {
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "goodMorningStartDay": "Start your day",
+  "morningQuote1": "Every morning is a fresh start.",
+  "morningQuote2": "Small steps still move you forward.",
+  "morningQuote3": "Start with one thing; the rest will follow.",
+  "morningQuote4": "Drink a glass of water, open a window, take a deep breath.",
+  "morningQuote5": "You don't have to be perfect to be doing well.",
+  "morningQuote6": "Today is a good day for something small and nice.",
+  "morningQuote7": "Slow is still forward.",
+  "morningQuote8": "A smile at breakfast is half the day won.",
+  "napAction": "Nap",
+  "napSheetTitle": "Wake me in…",
+  "napLabel": "Nap",
+  "napSetMessage": "Nap: alarm at {time}",
+  "@napSetMessage": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "undo": "Undo",
+  "statsCurrentStreak": "In a row without snoozing",
+  "statsBestStreak": "Best streak (recent)"
 }

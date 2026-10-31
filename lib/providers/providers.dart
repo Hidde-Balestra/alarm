@@ -103,6 +103,18 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   Future<void> setDefaultMaxSnoozes(int count) =>
       _update((s) => s.copyWith(defaultMaxSnoozes: count));
 
+  Future<void> setDefaultSunriseMinutes(int minutes) =>
+      _update((s) => s.copyWith(defaultSunriseMinutes: minutes));
+
+  Future<void> setDefaultWakeUpCheck(bool value) =>
+      _update((s) => s.copyWith(defaultWakeUpCheck: value));
+
+  Future<void> setDefaultShowGoodMorning(bool value) =>
+      _update((s) => s.copyWith(defaultShowGoodMorning: value));
+
+  Future<void> setDefaultSkipHolidays(bool value) =>
+      _update((s) => s.copyWith(defaultSkipHolidays: value));
+
   Future<void> setAlarmsPaused(bool paused) =>
       _update((s) => s.copyWith(alarmsPaused: paused));
 
@@ -198,7 +210,9 @@ class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
   }
 
   Future<void> remove(String id) async {
-    await ref.read(schedulerServiceProvider).cancelAlarm(id);
+    final scheduler = ref.read(schedulerServiceProvider);
+    await scheduler.cancelAlarm(id);
+    await scheduler.cancelWakeCheck(id);
     final current = await future;
     final updated = current.where((a) => a.id != id).toList();
     await _persist(updated);
@@ -235,7 +249,7 @@ class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
   /// Marks the alarm's next occurrence (as of now) to be skipped, e.g. the
   /// "skip tomorrow" action on a repeating alarm.
   Future<void> skipNext(String id) => _updateOne(id, (a) {
-        final next = a.nextOccurrence(DateTime.now());
+        final next = a.nextOccurrenceSkippingHolidays(DateTime.now());
         if (next == null) return a;
         return a.copyWith(skippedOccurrence: next);
       });
@@ -264,6 +278,32 @@ class AlarmsNotifier extends AsyncNotifier<List<Alarm>> {
 }
 
 final alarmsProvider = AsyncNotifierProvider<AlarmsNotifier, List<Alarm>>(AlarmsNotifier.new);
+
+/// An "are you awake?" check armed by dismissing an alarm with
+/// `Alarm.wakeUpCheck` on: the follow-up alarm rings at [ringsAt] unless
+/// confirmed first.
+class PendingWakeCheck {
+  final String alarmId;
+  final DateTime ringsAt;
+
+  const PendingWakeCheck(this.alarmId, this.ringsAt);
+}
+
+/// In-memory only, for the in-app "I'm awake" banner. Losing it (e.g. the
+/// app gets killed) is fail-safe: the follow-up alarm itself is scheduled
+/// with the OS and still rings, and the notification can still confirm.
+final pendingWakeCheckProvider = StateProvider<PendingWakeCheck?>((ref) => null);
+
+/// Answers an "are you awake?" check with yes: the follow-up ring is called
+/// off (or stopped, if already ringing) and the prompt goes away.
+Future<void> confirmAwake(WidgetRef ref, String alarmId) async {
+  await ref.read(schedulerServiceProvider).cancelWakeCheck(alarmId);
+  await ref.read(reminderNotificationServiceProvider).cancelWakeCheckPrompt(alarmId);
+  final pending = ref.read(pendingWakeCheckProvider);
+  if (pending?.alarmId == alarmId) {
+    ref.read(pendingWakeCheckProvider.notifier).state = null;
+  }
+}
 
 // --- Timers -------------------------------------------------------------------
 

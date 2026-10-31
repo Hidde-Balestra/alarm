@@ -31,7 +31,7 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "showOverLockscreen" -> {
-                    showOverLockscreen()
+                    showOverLockscreen(call.argument<Boolean>("dismissKeyguard") ?: true)
                     result.success(null)
                 }
                 "restoreLockscreen" -> {
@@ -43,12 +43,16 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    /// Called right before the ringing screen is shown, so it's visible and
-    /// usable even when the device was fully locked/asleep.
-    private fun showOverLockscreen() {
+    /// Called right before the ringing (or sunrise) screen is shown, so it's
+    /// visible and usable even when the device was fully locked/asleep, and
+    /// the display doesn't time out while it's up. [dismissKeyguard] is off
+    /// for the sunrise: it should glow over the lock screen without
+    /// prompting for a PIN while someone is still dozing.
+    private fun showOverLockscreen(dismissKeyguard: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             @Suppress("DEPRECATION")
             window.addFlags(
@@ -57,7 +61,7 @@ class MainActivity : FlutterActivity() {
                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
             )
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (dismissKeyguard && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val keyguardManager = getSystemService(KeyguardManager::class.java)
             keyguardManager?.requestDismissKeyguard(this, null)
         }
@@ -69,6 +73,7 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(false)
             setTurnScreenOn(false)
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             @Suppress("DEPRECATION")
             window.clearFlags(

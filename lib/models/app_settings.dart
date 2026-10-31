@@ -34,6 +34,10 @@ class AppSettings {
   final int defaultVolumeRampSeconds;
   final bool defaultRequireMathToDismiss;
   final int defaultMaxSnoozes;
+  final int defaultSunriseMinutes;
+  final bool defaultWakeUpCheck;
+  final bool defaultShowGoodMorning;
+  final bool defaultSkipHolidays;
 
   /// When true, every alarm is cancelled at the OS level without touching
   /// individual `enabled` flags — a manual "pause everything" switch for
@@ -54,6 +58,10 @@ class AppSettings {
     this.defaultVolumeRampSeconds = 0,
     this.defaultRequireMathToDismiss = false,
     this.defaultMaxSnoozes = 0,
+    this.defaultSunriseMinutes = 0,
+    this.defaultWakeUpCheck = false,
+    this.defaultShowGoodMorning = true,
+    this.defaultSkipHolidays = false,
     this.alarmsPaused = false,
     this.desiredSleepHours = 8,
   });
@@ -74,6 +82,10 @@ class AppSettings {
     int? defaultVolumeRampSeconds,
     bool? defaultRequireMathToDismiss,
     int? defaultMaxSnoozes,
+    int? defaultSunriseMinutes,
+    bool? defaultWakeUpCheck,
+    bool? defaultShowGoodMorning,
+    bool? defaultSkipHolidays,
     bool? alarmsPaused,
     double? desiredSleepHours,
   }) {
@@ -88,6 +100,10 @@ class AppSettings {
       defaultRequireMathToDismiss:
           defaultRequireMathToDismiss ?? this.defaultRequireMathToDismiss,
       defaultMaxSnoozes: defaultMaxSnoozes ?? this.defaultMaxSnoozes,
+      defaultSunriseMinutes: defaultSunriseMinutes ?? this.defaultSunriseMinutes,
+      defaultWakeUpCheck: defaultWakeUpCheck ?? this.defaultWakeUpCheck,
+      defaultShowGoodMorning: defaultShowGoodMorning ?? this.defaultShowGoodMorning,
+      defaultSkipHolidays: defaultSkipHolidays ?? this.defaultSkipHolidays,
       alarmsPaused: alarmsPaused ?? this.alarmsPaused,
       desiredSleepHours: desiredSleepHours ?? this.desiredSleepHours,
     );
@@ -103,6 +119,10 @@ class AppSettings {
         'defaultVolumeRampSeconds': defaultVolumeRampSeconds,
         'defaultRequireMathToDismiss': defaultRequireMathToDismiss,
         'defaultMaxSnoozes': defaultMaxSnoozes,
+        'defaultSunriseMinutes': defaultSunriseMinutes,
+        'defaultWakeUpCheck': defaultWakeUpCheck,
+        'defaultShowGoodMorning': defaultShowGoodMorning,
+        'defaultSkipHolidays': defaultSkipHolidays,
         'alarmsPaused': alarmsPaused,
         'desiredSleepHours': desiredSleepHours,
       };
@@ -117,6 +137,10 @@ class AppSettings {
         defaultVolumeRampSeconds: json['defaultVolumeRampSeconds'] as int? ?? 0,
         defaultRequireMathToDismiss: json['defaultRequireMathToDismiss'] as bool? ?? false,
         defaultMaxSnoozes: json['defaultMaxSnoozes'] as int? ?? 0,
+        defaultSunriseMinutes: json['defaultSunriseMinutes'] as int? ?? 0,
+        defaultWakeUpCheck: json['defaultWakeUpCheck'] as bool? ?? false,
+        defaultShowGoodMorning: json['defaultShowGoodMorning'] as bool? ?? true,
+        defaultSkipHolidays: json['defaultSkipHolidays'] as bool? ?? false,
         alarmsPaused: json['alarmsPaused'] as bool? ?? false,
         desiredSleepHours: (json['desiredSleepHours'] as num?)?.toDouble() ?? 8,
       );

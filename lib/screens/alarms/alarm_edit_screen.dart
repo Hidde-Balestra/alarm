@@ -4,6 +4,7 @@ import 'package:alarm_app/models/repeat_rule.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/widgets/format_helpers.dart';
 import 'package:alarm_app/widgets/sound_selector_tile.dart';
+import 'package:alarm_app/widgets/wake_up_options.dart';
 import 'package:alarm_app/widgets/weekday_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +34,10 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
   late int _volumeRampSeconds;
   late bool _requireMathToDismiss;
   late int _maxSnoozes;
+  late int _sunriseMinutes;
+  late bool _wakeUpCheck;
+  late bool _showGoodMorning;
+  late bool _skipHolidays;
 
   bool get _isNew => widget.alarm == null;
 
@@ -53,6 +58,10 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     _requireMathToDismiss =
         alarm?.requireMathToDismiss ?? defaults?.defaultRequireMathToDismiss ?? false;
     _maxSnoozes = alarm?.maxSnoozes ?? defaults?.defaultMaxSnoozes ?? 0;
+    _sunriseMinutes = alarm?.sunriseMinutes ?? defaults?.defaultSunriseMinutes ?? 0;
+    _wakeUpCheck = alarm?.wakeUpCheck ?? defaults?.defaultWakeUpCheck ?? false;
+    _showGoodMorning = alarm?.showGoodMorning ?? defaults?.defaultShowGoodMorning ?? true;
+    _skipHolidays = alarm?.skipHolidays ?? defaults?.defaultSkipHolidays ?? false;
   }
 
   @override
@@ -90,22 +99,12 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     if (picked != null) setState(() => _biweeklyAnchor = picked);
   }
 
-  DateTime? _nextOccurrence() =>
-      _buildRepeatRule().nextOccurrence(DateTime.now(), hour: _time.hour, minute: _time.minute);
+  DateTime? _nextOccurrence() => _draft().effectiveNextOccurrence(DateTime.now());
 
-  Future<void> _save() async {
-    final l10n = AppLocalizations.of(context);
-    if ((_repeatType == RepeatType.weekly || _repeatType == RepeatType.biweekly) &&
-        _weekdays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.repeatSectionTitle)),
-      );
-      return;
-    }
-
-    final notifier = ref.read(alarmsProvider.notifier);
-    final alarm = Alarm(
-      id: widget.alarm?.id ?? notifier.newAlarmId(),
+  /// The alarm as currently edited (not yet saved).
+  Alarm _draft() {
+    return Alarm(
+      id: widget.alarm?.id ?? '',
       hour: _time.hour,
       minute: _time.minute,
       label: _labelController.text.trim(),
@@ -119,7 +118,27 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       maxSnoozes: _maxSnoozes,
       snoozeCount: widget.alarm?.snoozeCount ?? 0,
       skippedOccurrence: widget.alarm?.skippedOccurrence,
+      sunriseMinutes: _sunriseMinutes,
+      wakeUpCheck: _wakeUpCheck,
+      showGoodMorning: _showGoodMorning,
+      skipHolidays: _skipHolidays,
+      isNap: widget.alarm?.isNap ?? false,
     );
+  }
+
+  Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
+    if ((_repeatType == RepeatType.weekly || _repeatType == RepeatType.biweekly) &&
+        _weekdays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.repeatSectionTitle)),
+      );
+      return;
+    }
+
+    final notifier = ref.read(alarmsProvider.notifier);
+    final draft = _draft();
+    final alarm = draft.id.isEmpty ? draft.copyWith(id: notifier.newAlarmId()) : draft;
     await notifier.upsert(alarm);
     if (mounted) Navigator.of(context).pop();
   }
@@ -324,6 +343,20 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             isThreeLine: true,
             value: _requireMathToDismiss,
             onChanged: (value) => setState(() => _requireMathToDismiss = value),
+          ),
+          const SizedBox(height: 24),
+          Text(l10n.wakeUpSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+          WakeUpOptions(
+            contentPadding: EdgeInsets.zero,
+            sunriseMinutes: _sunriseMinutes,
+            onSunriseMinutesChanged: (value) => setState(() => _sunriseMinutes = value),
+            wakeUpCheck: _wakeUpCheck,
+            onWakeUpCheckChanged: (value) => setState(() => _wakeUpCheck = value),
+            showGoodMorning: _showGoodMorning,
+            onShowGoodMorningChanged: (value) => setState(() => _showGoodMorning = value),
+            skipHolidays: _skipHolidays,
+            onSkipHolidaysChanged: (value) => setState(() => _skipHolidays = value),
+            showHolidayOption: _repeatType != RepeatType.none,
           ),
         ],
       ),

@@ -9,23 +9,37 @@ import 'package:flutter/foundation.dart';
 /// What kind of ringing entity an [plugin.AlarmSettings.payload] refers to.
 enum RingingKind { alarm, timer }
 
+/// Which ring of an alarm this is: its normal one, or the follow-up from an
+/// unanswered "are you awake?" check (see `Alarm.wakeUpCheck`). The two get
+/// separate OS-level ids so the follow-up never replaces the alarm's own
+/// next occurrence, which is scheduled right as the original is dismissed.
+enum RingingStage { ring, wakeCheck }
+
 /// Decoded identity of a ringing/scheduled entity, recovered from the
 /// `payload` field so the UI can look up the right [model.Alarm] or timer by
 /// its own string id instead of the numeric id the OS scheduler needs.
 class RingingRef {
   final RingingKind kind;
   final String refId;
+  final RingingStage stage;
 
-  const RingingRef(this.kind, this.refId);
+  const RingingRef(this.kind, this.refId, {this.stage = RingingStage.ring});
 
-  String encode() => jsonEncode({'kind': kind.name, 'refId': refId});
+  bool get isWakeCheck => stage == RingingStage.wakeCheck;
+
+  String encode() => jsonEncode({
+        'kind': kind.name,
+        'refId': refId,
+        if (stage != RingingStage.ring) 'stage': stage.name,
+      });
 
   static RingingRef? tryDecode(String? payload) {
     if (payload == null) return null;
     try {
       final json = jsonDecode(payload) as Map<String, dynamic>;
       final kind = RingingKind.values.byName(json['kind'] as String);
-      return RingingRef(kind, json['refId'] as String);
+      final stage = RingingStage.values.byName(json['stage'] as String? ?? 'ring');
+      return RingingRef(kind, json['refId'] as String, stage: stage);
     } catch (_) {
       return null;
     }
@@ -43,8 +57,12 @@ class AlarmSchedulerService {
 
   Stream<plugin.AlarmSet> get ringing => plugin.Alarm.ringing;
 
-  int _numericId(RingingKind kind, String refId) =>
-      ('${kind.name}-$refId').hashCode & 0x7fffffff;
+  // The plain `kind-refId` form for normal rings is kept as-is so ids of
+  // alarms scheduled by earlier app versions still match after an update.
+  int _numericId(RingingKind kind, String refId, [RingingStage stage = RingingStage.ring]) =>
+      (stage == RingingStage.ring ? '${kind.name}-$refId' : '${kind.name}-${stage.name}-$refId')
+          .hashCode &
+      0x7fffffff;
 
   /// Whether [alarmId] is *currently* ringing, per a fresh, authoritative
   /// query to the plugin — not Dart-side tracked state. That distinction
@@ -158,6 +176,43 @@ class AlarmSchedulerService {
   Future<void> cancelAlarm(String alarmId) =>
       plugin.Alarm.stop(_numericId(RingingKind.alarm, alarmId));
 
+  /// Schedules the follow-up ring of an "are you awake?" check at [at]. It
+  /// uses its own id (see [RingingStage]), so it coexists with the alarm's
+  /// regular next occurrence and survives [cancelAlarm].
+  Future<void> scheduleWakeCheck(
+    model.Alarm alarm, {
+    required DateTime at,
+    required String soundAssetPath,
+    required String notificationTitle,
+    required String notificationBody,
+    required String stopButtonLabel,
+  }) async {
+    await plugin.Alarm.set(
+      alarmSettings: plugin.AlarmSettings(
+        id: _numericId(RingingKind.alarm, alarm.id, RingingStage.wakeCheck),
+        dateTime: at,
+        assetAudioPath: soundAssetPath,
+        loopAudio: true,
+        vibrate: alarm.vibrate,
+        androidFullScreenIntent: true,
+        androidStopAlarmOnTermination: _stopOnTermination,
+        warningNotificationOnKill: _warnOnKill,
+        volumeSettings: _volumeSettings(0),
+        notificationSettings: plugin.NotificationSettings(
+          title: notificationTitle,
+          body: notificationBody,
+          stopButton: stopButtonLabel,
+        ),
+        payload: RingingRef(RingingKind.alarm, alarm.id, stage: RingingStage.wakeCheck).encode(),
+      ),
+    );
+  }
+
+  /// Confirms an "are you awake?" check: the follow-up ring won't happen
+  /// (or stops, if it's already ringing).
+  Future<void> cancelWakeCheck(String alarmId) =>
+      plugin.Alarm.stop(_numericId(RingingKind.alarm, alarmId, RingingStage.wakeCheck));
+
   /// Fixed id for the Settings screen's "ring now" test alarm, so repeated
   /// taps simply reschedule the same one instead of piling up new ids.
   static const testAlarmId = 'test-alarm';
@@ -235,7 +290,7 @@ class AlarmSchedulerService {
   Future<void> stopRingingByPayload(String? payload) async {
     final ref = RingingRef.tryDecode(payload);
     if (ref == null) return;
-    final id = _numericId(ref.kind, ref.refId);
+    final id = _numericId(ref.kind, ref.refId, ref.stage);
     await plugin.Alarm.stop(id);
   }
 }

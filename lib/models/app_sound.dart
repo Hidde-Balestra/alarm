@@ -5,7 +5,7 @@ import 'package:alarm_app/models/custom_sound.dart';
 /// timers and settings store a plain `String soundId` instead of this enum
 /// directly, since a chosen sound may also be a user-uploaded [CustomSound]
 /// — see [resolveSoundAssetPath] and [resolveSoundLabel].
-enum AppSound { classic, digital, gentle, siren }
+enum AppSound { classic, digital, gentle, chimes, harp, ocean, sunrise, siren }
 
 extension AppSoundAsset on AppSound {
   String get assetPath => 'assets/sounds/$name.wav';
@@ -15,6 +15,10 @@ String appSoundLabel(AppLocalizations l10n, AppSound sound) => switch (sound) {
       AppSound.classic => l10n.soundClassic,
       AppSound.digital => l10n.soundDigital,
       AppSound.gentle => l10n.soundGentle,
+      AppSound.chimes => l10n.soundChimes,
+      AppSound.harp => l10n.soundHarp,
+      AppSound.ocean => l10n.soundOcean,
+      AppSound.sunrise => l10n.soundSunrise,
       AppSound.siren => l10n.soundSiren,
     };
 

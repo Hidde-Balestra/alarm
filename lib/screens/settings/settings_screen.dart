@@ -10,6 +10,7 @@ import 'package:alarm_app/screens/history/stats_screen.dart';
 import 'package:alarm_app/services/permission_service.dart';
 import 'package:alarm_app/services/update_service.dart';
 import 'package:alarm_app/widgets/sound_selector_tile.dart';
+import 'package:alarm_app/widgets/wake_up_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -186,6 +187,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             subtitle: Text(l10n.requireMathToDismissHint),
             value: settings.defaultRequireMathToDismiss,
             onChanged: notifier.setDefaultRequireMathToDismiss,
+          ),
+          const Divider(),
+          _SectionHeader(title: l10n.wakeUpSectionTitle),
+          WakeUpOptions(
+            sunriseMinutes: settings.defaultSunriseMinutes,
+            onSunriseMinutesChanged: notifier.setDefaultSunriseMinutes,
+            wakeUpCheck: settings.defaultWakeUpCheck,
+            onWakeUpCheckChanged: notifier.setDefaultWakeUpCheck,
+            showGoodMorning: settings.defaultShowGoodMorning,
+            onShowGoodMorningChanged: notifier.setDefaultShowGoodMorning,
+            skipHolidays: settings.defaultSkipHolidays,
+            onSkipHolidaysChanged: notifier.setDefaultSkipHolidays,
           ),
           const Divider(),
           _SectionHeader(title: l10n.settingsBedtimeSection, subtitle: l10n.settingsBedtimeSubtitle),

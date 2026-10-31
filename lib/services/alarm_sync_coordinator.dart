@@ -54,7 +54,8 @@ Future<void> syncAlarmsWithScheduler({
 /// Pushes the current in-app alarm list to the reminder notifications, the
 /// same way [syncAlarmsWithScheduler] does for the real OS-level alarm: a
 /// quiet heads-up [reminderLeadTime] before each alarm's next occurrence,
-/// with a "skip once" action. Safe to call any time the alarm list changes.
+/// with a "skip once" action, plus the silent sunrise trigger for alarms
+/// that have one. Safe to call any time the alarm list changes.
 Future<void> syncReminderNotifications({
   required List<Alarm> alarms,
   required ReminderNotificationService reminders,
@@ -64,21 +65,54 @@ Future<void> syncReminderNotifications({
 }) async {
   final from = now ?? DateTime.now();
   for (final alarm in alarms) {
-    if (paused || !alarm.enabled) {
-      await reminders.cancelReminder(alarm.id);
-      continue;
-    }
-    final next = alarm.effectiveNextOccurrence(from);
+    final next = paused || !alarm.enabled ? null : alarm.effectiveNextOccurrence(from);
     if (next == null) {
       await reminders.cancelReminder(alarm.id);
+      await reminders.cancelSunrise(alarm.id);
       continue;
     }
+    final body = alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label;
     await reminders.scheduleReminder(
       alarmId: alarm.id,
       occurrence: next,
       title: l10n.alarmReminderTitle(reminderLeadTime.inMinutes),
-      body: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
+      body: body,
       skipActionLabel: l10n.skipNextAction,
     );
+    await reminders.scheduleSunrise(
+      alarmId: alarm.id,
+      occurrence: next,
+      minutes: alarm.sunriseMinutes,
+      title: l10n.sunriseTitle,
+      body: body,
+    );
   }
+}
+
+/// An alarm whose sunrise window (`sunriseMinutes` before it rings) is
+/// running right now.
+class ActiveSunrise {
+  final Alarm alarm;
+  final DateTime startsAt;
+  final DateTime ringsAt;
+
+  const ActiveSunrise(this.alarm, this.startsAt, this.ringsAt);
+}
+
+/// The alarm (if any) whose sunrise should be showing at [now]. Picks the
+/// soonest-ringing one if windows overlap.
+ActiveSunrise? activeSunrise(List<Alarm> alarms, DateTime now, {bool paused = false}) {
+  if (paused) return null;
+  ActiveSunrise? best;
+  for (final alarm in alarms) {
+    if (!alarm.enabled || alarm.sunriseMinutes <= 0) continue;
+    final ringsAt = alarm.effectiveNextOccurrence(now);
+    if (ringsAt == null) continue;
+    final startsAt = ringsAt.subtract(Duration(minutes: alarm.sunriseMinutes));
+    if (now.isBefore(startsAt)) continue;
+    if (best == null || ringsAt.isBefore(best.ringsAt)) {
+      best = ActiveSunrise(alarm, startsAt, ringsAt);
+    }
+  }
+  return best;
 }

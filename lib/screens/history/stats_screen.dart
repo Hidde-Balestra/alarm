@@ -54,6 +54,16 @@ class StatsScreen extends ConsumerWidget {
                 value: '${stats.dismissedWithoutSnoozeCount}',
               ),
               _StatTile(
+                icon: Icons.local_fire_department_outlined,
+                label: l10n.statsCurrentStreak,
+                value: '${stats.currentNoSnoozeStreak}',
+              ),
+              _StatTile(
+                icon: Icons.emoji_events_outlined,
+                label: l10n.statsBestStreak,
+                value: '${stats.bestNoSnoozeStreak}',
+              ),
+              _StatTile(
                 icon: Icons.snooze_outlined,
                 label: l10n.statsTotalSnoozes,
                 value: '${stats.totalSnoozeCount}',

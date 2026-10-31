@@ -19,8 +19,15 @@ A Flutter alarm clock & timer app for Android and iOS, built for reliability: al
 - An Android homescreen widget showing the next upcoming alarm (tap to open the app).
 - A bedtime card on the Alarms screen, computed from your first alarm tomorrow and a configurable desired sleep duration.
 - A history log of when alarms/timers rang, got snoozed, or were dismissed — with rings that were never snoozed or dismissed flagged as missed.
-- A statistics screen summarizing recent alarm activity (times rung, snooze counts, average time to dismiss, missed alarms).
+- A statistics screen summarizing recent alarm activity (times rung, snooze counts, average time to dismiss, missed alarms, and your current/best streak of alarms dismissed without snoozing).
 - Export/import your alarms as a JSON file, to back them up or move them to another device.
+- Relaxing bundled sounds (wind chimes, harp, ocean waves, sunrise pad) alongside the classic ones.
+- Per-alarm "waking up" options, each with a default in Settings:
+  - **Sunrise light**: 10–30 minutes before the alarm, the screen silently brightens from dark to warm light (Android; started by a silent full-screen notification, never by a second `alarm`-plugin alarm, so it can't block the real one).
+  - **"Are you awake?" check**: after dismissing, a notification asks you to confirm; if you don't within 5 minutes, the alarm rings again.
+  - **Good-morning screen** after dismissing: greeting, date, your streak, the next alarm and a thought for the day.
+  - **Skip Dutch public holidays** on repeating alarms (King's Day, Easter, Ascension, Whitsun, Christmas, New Year's Day, and Liberation Day in lustrum years).
+- A nap button: one tap for a 10–90 minute one-shot alarm that removes itself once dismissed.
 
 ## Reliability notes
 

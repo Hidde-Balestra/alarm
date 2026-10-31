@@ -58,6 +58,26 @@ class FakeAlarmSchedulerService implements AlarmSchedulerService {
     cancelledAlarmIds.add(alarmId);
   }
 
+  final List<String> scheduledWakeCheckIds = [];
+  final List<String> cancelledWakeCheckIds = [];
+
+  @override
+  Future<void> scheduleWakeCheck(
+    model.Alarm alarm, {
+    required DateTime at,
+    required String soundAssetPath,
+    required String notificationTitle,
+    required String notificationBody,
+    required String stopButtonLabel,
+  }) async {
+    scheduledWakeCheckIds.add(alarm.id);
+  }
+
+  @override
+  Future<void> cancelWakeCheck(String alarmId) async {
+    cancelledWakeCheckIds.add(alarmId);
+  }
+
   @override
   Future<void> scheduleTimer(
     String timerId,

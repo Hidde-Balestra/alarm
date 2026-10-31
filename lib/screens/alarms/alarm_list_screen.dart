@@ -19,13 +19,27 @@ class AlarmListScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider).valueOrNull ?? const AppSettings();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navAlarms)),
+      appBar: AppBar(
+        title: Text(l10n.navAlarms),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.hotel_outlined),
+            tooltip: l10n.napAction,
+            onPressed: () => _startNap(context, ref),
+          ),
+        ],
+      ),
       body: alarmsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('$error')),
         data: (alarms) {
           if (alarms.isEmpty) {
-            return _EmptyState(l10n: l10n);
+            return Column(
+              children: [
+                const _WakeCheckBanner(),
+                Expanded(child: _EmptyState(l10n: l10n)),
+              ],
+            );
           }
           final upcoming =
               settings.alarmsPaused ? null : nextUpcomingAlarm(alarms, DateTime.now());
@@ -33,6 +47,7 @@ class AlarmListScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.only(bottom: 96),
             children: [
+              const _WakeCheckBanner(),
               if (settings.alarmsPaused) const _PausedBanner(),
               if (bedtime != null) _BedtimeCard(bedtime: bedtime, upcoming: upcoming!),
               for (final alarm in alarms) _AlarmTile(alarm: alarm),
@@ -52,6 +67,111 @@ class AlarmListScreen extends ConsumerWidget {
   static void _openEditor(BuildContext context, WidgetRef ref, Alarm? alarm) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AlarmEditScreen(alarm: alarm)),
+    );
+  }
+
+  /// Asks how long to nap, then adds a one-shot nap alarm (see
+  /// `Alarm.isNap`) using the default sound/vibration/snooze settings.
+  static Future<void> _startNap(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final minutes = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.napSheetTitle, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            for (final option in napMinuteOptions)
+              ListTile(
+                leading: const Icon(Icons.hotel_outlined),
+                title: Text(l10n.minutesShort(option)),
+                onTap: () => Navigator.of(context).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (minutes == null || !context.mounted) return;
+
+    final settings = ref.read(settingsProvider).valueOrNull ?? const AppSettings();
+    final notifier = ref.read(alarmsProvider.notifier);
+    final nap = buildNapAlarm(
+      id: notifier.newAlarmId(),
+      now: DateTime.now(),
+      minutes: minutes,
+      label: l10n.napLabel,
+      settings: settings,
+    );
+    await notifier.upsert(nap);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.napSetMessage(formatTimeOfDay(context, nap.hour, nap.minute))),
+        action: SnackBarAction(label: l10n.undo, onPressed: () => notifier.remove(nap.id)),
+      ),
+    );
+  }
+}
+
+/// Nap lengths offered by the nap button, in minutes.
+const napMinuteOptions = [10, 20, 30, 45, 60, 90];
+
+/// A one-shot alarm [minutes] from [now] (rounded up to the next whole
+/// minute, since alarms only store hour and minute).
+Alarm buildNapAlarm({
+  required String id,
+  required DateTime now,
+  required int minutes,
+  required String label,
+  required AppSettings settings,
+}) {
+  var at = now.add(Duration(minutes: minutes));
+  if (at.second > 0 || at.millisecond > 0 || at.microsecond > 0) {
+    at = DateTime(at.year, at.month, at.day, at.hour, at.minute + 1);
+  }
+  return Alarm(
+    id: id,
+    hour: at.hour,
+    minute: at.minute,
+    label: label,
+    vibrate: settings.defaultVibrate,
+    snoozeMinutes: settings.defaultSnoozeMinutes,
+    soundId: settings.defaultAlarmSoundId,
+    volumeRampSeconds: settings.defaultVolumeRampSeconds,
+    showGoodMorning: false,
+    isNap: true,
+  );
+}
+
+/// Shown while an "are you awake?" check is waiting for an answer.
+class _WakeCheckBanner extends ConsumerWidget {
+  const _WakeCheckBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(pendingWakeCheckProvider);
+    final now = ref.watch(clockProvider).valueOrNull ?? DateTime.now();
+    if (pending == null || !now.isBefore(pending.ringsAt)) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      color: scheme.tertiaryContainer,
+      child: ListTile(
+        leading: Icon(Icons.notifications_active_outlined, color: scheme.onTertiaryContainer),
+        title: Text(
+          l10n.wakeCheckBanner(
+            formatTimeOfDay(context, pending.ringsAt.hour, pending.ringsAt.minute),
+          ),
+          style: TextStyle(color: scheme.onTertiaryContainer),
+        ),
+        trailing: FilledButton(
+          onPressed: () => confirmAwake(ref, pending.alarmId),
+          child: Text(l10n.wakeCheckAwakeAction),
+        ),
+      ),
     );
   }
 }
@@ -156,6 +276,7 @@ class _AlarmTile extends ConsumerWidget {
       if (alarm.label.isNotEmpty) alarm.label,
     ];
     final next = alarm.enabled ? alarm.effectiveNextOccurrence(now) : null;
+    final skippedHoliday = alarm.enabled ? alarm.upcomingSkippedHoliday(now) : null;
 
     return ListTile(
       onTap: () => Navigator.of(context).push(
@@ -179,6 +300,13 @@ class _AlarmTile extends ConsumerWidget {
               formatNextOccurrence(context, l10n, next),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+          if (skippedHoliday != null)
+            Text(
+              l10n.holidaySkippedLabel(dutchHolidayLabel(l10n, skippedHoliday)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.tertiary,
                   ),
             ),
           if (isSkipped)

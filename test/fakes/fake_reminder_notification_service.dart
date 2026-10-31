@@ -27,4 +27,46 @@ class FakeReminderNotificationService implements ReminderNotificationService {
     cancelledAlarmIds.add(alarmId);
     scheduledAlarmIds.remove(alarmId);
   }
+
+  /// Alarm id → sunrise length in minutes, for currently scheduled ones.
+  final Map<String, int> scheduledSunrises = {};
+
+  @override
+  Future<void> scheduleSunrise({
+    required String alarmId,
+    required DateTime occurrence,
+    required int minutes,
+    required String title,
+    required String body,
+  }) async {
+    if (minutes <= 0) {
+      scheduledSunrises.remove(alarmId);
+    } else {
+      scheduledSunrises[alarmId] = minutes;
+    }
+  }
+
+  @override
+  Future<void> cancelSunrise(String alarmId) async {
+    scheduledSunrises.remove(alarmId);
+  }
+
+  final Set<String> scheduledWakeCheckPrompts = {};
+
+  @override
+  Future<void> scheduleWakeCheckPrompt({
+    required String alarmId,
+    required DateTime at,
+    required DateTime expiresAt,
+    required String title,
+    required String body,
+    required String awakeActionLabel,
+  }) async {
+    scheduledWakeCheckPrompts.add(alarmId);
+  }
+
+  @override
+  Future<void> cancelWakeCheckPrompt(String alarmId) async {
+    scheduledWakeCheckPrompts.remove(alarmId);
+  }
 }

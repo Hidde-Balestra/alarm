@@ -1,4 +1,5 @@
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
+import 'package:alarm_app/models/holidays.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -94,3 +95,20 @@ String formatStopwatchClock(Duration duration) {
     ..write(tenths);
   return buffer.toString();
 }
+
+String dutchHolidayLabel(AppLocalizations l10n, DutchHoliday holiday) => switch (holiday) {
+      DutchHoliday.newYearsDay => l10n.holidayNewYearsDay,
+      DutchHoliday.easterSunday => l10n.holidayEasterSunday,
+      DutchHoliday.easterMonday => l10n.holidayEasterMonday,
+      DutchHoliday.kingsDay => l10n.holidayKingsDay,
+      DutchHoliday.liberationDay => l10n.holidayLiberationDay,
+      DutchHoliday.ascensionDay => l10n.holidayAscensionDay,
+      DutchHoliday.whitSunday => l10n.holidayWhitSunday,
+      DutchHoliday.whitMonday => l10n.holidayWhitMonday,
+      DutchHoliday.christmasDay => l10n.holidayChristmasDay,
+      DutchHoliday.boxingDay => l10n.holidayBoxingDay,
+    };
+
+/// "10 min before" for a sunrise lead time, or "Off" for `0`.
+String sunriseOptionLabel(AppLocalizations l10n, int minutes) =>
+    minutes == 0 ? l10n.optionOff : l10n.sunriseMinutesBefore(minutes);

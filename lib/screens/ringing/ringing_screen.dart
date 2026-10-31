@@ -6,6 +6,7 @@ import 'package:alarm_app/models/math_challenge.dart';
 import 'package:alarm_app/models/timer_session.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
+import 'package:alarm_app/services/reminder_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -28,6 +29,9 @@ TimerSession? _findTimer(List<TimerSession> timers, String id) {
 
 /// Full-screen view shown when an alarm or timer fires. Deliberately blocks
 /// the back gesture/button — dismissing must be a conscious action.
+///
+/// Pops `true` when the app should follow up with the good-morning screen
+/// (see `Alarm.showGoodMorning`), anything else otherwise.
 class RingingScreen extends ConsumerWidget {
   final RingingRef ringingRef;
 
@@ -43,8 +47,17 @@ class RingingScreen extends ConsumerWidget {
     final label = isAlarm
         ? alarm?.label
         : _findTimer(ref.watch(timersProvider).valueOrNull ?? const [], ringingRef.refId)?.label;
-    final canSnooze =
-        isAlarm && (alarm == null || alarm.maxSnoozes == 0 || alarm.snoozeCount < alarm.maxSnoozes);
+    // The follow-up of an unanswered "are you awake?" check only asks for
+    // confirmation; snoozing it would defeat the point.
+    final isWakeCheck = ringingRef.isWakeCheck;
+    final canSnooze = isAlarm &&
+        !isWakeCheck &&
+        (alarm == null || alarm.maxSnoozes == 0 || alarm.snoozeCount < alarm.maxSnoozes);
+    final title = isWakeCheck
+        ? l10n.wakeCheckRingingTitle
+        : isAlarm
+            ? l10n.alarmRingingTitle
+            : l10n.timerFinishedTitle;
 
     return PopScope(
       canPop: false,
@@ -63,7 +76,7 @@ class RingingScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  isAlarm ? l10n.alarmRingingTitle : l10n.timerFinishedTitle,
+                  title,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -89,7 +102,7 @@ class RingingScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => _dismiss(context, ref, alarm),
-                    child: Text(l10n.dismiss),
+                    child: Text(isWakeCheck ? l10n.wakeCheckAwakeAction : l10n.dismiss),
                   ),
                 ),
               ],
@@ -119,28 +132,44 @@ class RingingScreen extends ConsumerWidget {
     }
     if (!context.mounted) return;
 
+    if (ringingRef.isWakeCheck) {
+      // Not logged to history: it's the tail end of a wake-up that was
+      // already logged as dismissed, not a new ring.
+      await confirmAwake(ref, ringingRef.refId);
+      if (context.mounted) Navigator.of(context).pop(false);
+      return;
+    }
+
     final scheduler = ref.read(schedulerServiceProvider);
     final l10n = AppLocalizations.of(context);
     final label = alarm?.label ??
         _findTimer(ref.read(timersProvider).valueOrNull ?? const [], ringingRef.refId)?.label ??
         '';
+    final customSounds = ref.read(customSoundsProvider).valueOrNull ?? const [];
 
     if (ringingRef.kind == RingingKind.alarm) {
       await scheduler.cancelAlarm(ringingRef.refId);
       if (alarm != null) {
-        await ref.read(alarmsProvider.notifier).resetSnoozeCount(alarm.id);
-        if (alarm.repeat.repeats) {
-          final customSounds = ref.read(customSoundsProvider).valueOrNull ?? const [];
-          await scheduler.scheduleNext(
-            alarm,
-            from: DateTime.now(),
-            soundAssetPath: resolveSoundAssetPath(alarm.soundId, customSounds),
-            notificationTitle: l10n.alarmRingingTitle,
-            notificationBody: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
-            stopButtonLabel: l10n.dismiss,
-          );
+        final notifier = ref.read(alarmsProvider.notifier);
+        if (alarm.isNap) {
+          await notifier.remove(alarm.id);
         } else {
-          await ref.read(alarmsProvider.notifier).disableAfterOneShot(alarm.id);
+          await notifier.resetSnoozeCount(alarm.id);
+          if (alarm.repeat.repeats) {
+            await scheduler.scheduleNext(
+              alarm,
+              from: DateTime.now(),
+              soundAssetPath: resolveSoundAssetPath(alarm.soundId, customSounds),
+              notificationTitle: l10n.alarmRingingTitle,
+              notificationBody: alarm.label.isEmpty ? l10n.alarmRingingTitle : alarm.label,
+              stopButtonLabel: l10n.dismiss,
+            );
+          } else {
+            await notifier.disableAfterOneShot(alarm.id);
+          }
+          if (alarm.wakeUpCheck) {
+            await _armWakeCheck(ref, l10n, alarm, resolveSoundAssetPath(alarm.soundId, customSounds));
+          }
         }
       }
     } else {
@@ -160,7 +189,37 @@ class RingingScreen extends ConsumerWidget {
           ),
         );
 
-    if (context.mounted) Navigator.of(context).pop();
+    final showGoodMorning = alarm != null && alarm.showGoodMorning && !alarm.isNap;
+    if (context.mounted) Navigator.of(context).pop(showGoodMorning);
+  }
+
+  /// Schedules the "are you awake?" prompt and, behind it, the follow-up
+  /// ring that fires unless the prompt gets confirmed.
+  Future<void> _armWakeCheck(
+    WidgetRef ref,
+    AppLocalizations l10n,
+    Alarm alarm,
+    String soundAssetPath,
+  ) async {
+    final now = DateTime.now();
+    final ringsAt = now.add(wakeCheckRingDelay);
+    await ref.read(schedulerServiceProvider).scheduleWakeCheck(
+          alarm,
+          at: ringsAt,
+          soundAssetPath: soundAssetPath,
+          notificationTitle: l10n.wakeCheckRingingTitle,
+          notificationBody: alarm.label.isEmpty ? l10n.wakeCheckRingingTitle : alarm.label,
+          stopButtonLabel: l10n.wakeCheckAwakeAction,
+        );
+    await ref.read(reminderNotificationServiceProvider).scheduleWakeCheckPrompt(
+          alarmId: alarm.id,
+          at: now.add(wakeCheckPromptDelay),
+          expiresAt: ringsAt,
+          title: l10n.wakeCheckPromptTitle,
+          body: l10n.wakeCheckPromptBody((wakeCheckRingDelay - wakeCheckPromptDelay).inMinutes),
+          awakeActionLabel: l10n.wakeCheckAwakeAction,
+        );
+    ref.read(pendingWakeCheckProvider.notifier).state = PendingWakeCheck(alarm.id, ringsAt);
   }
 
   Future<void> _snooze(BuildContext context, WidgetRef ref) async {

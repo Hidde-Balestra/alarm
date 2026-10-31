@@ -14,10 +14,12 @@ class LockscreenService {
 
   bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
-  Future<void> showOverLockscreen() async {
+  /// [dismissKeyguard] also asks the OS to unlock (prompting for a PIN on a
+  /// secure lock screen); the sunrise turns it off to stay unobtrusive.
+  Future<void> showOverLockscreen({bool dismissKeyguard = true}) async {
     if (!_isAndroid) return;
     try {
-      await _channel.invokeMethod('showOverLockscreen');
+      await _channel.invokeMethod('showOverLockscreen', {'dismissKeyguard': dismissKeyguard});
     } on PlatformException {
       // Ignore: nothing more we can do if the OS refuses.
     } on MissingPluginException {

@@ -7,9 +7,12 @@ import 'package:alarm_app/models/history_entry.dart';
 import 'package:alarm_app/models/upcoming_alarm.dart';
 import 'package:alarm_app/providers/providers.dart';
 import 'package:alarm_app/screens/home_shell.dart';
+import 'package:alarm_app/screens/ringing/good_morning_screen.dart';
 import 'package:alarm_app/screens/ringing/ringing_screen.dart';
+import 'package:alarm_app/screens/ringing/sunrise_screen.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/alarm_sync_coordinator.dart';
+import 'package:alarm_app/services/reminder_notification_service.dart';
 import 'package:alarm_app/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,10 +40,34 @@ class AlarmApp extends ConsumerStatefulWidget {
   ConsumerState<AlarmApp> createState() => _AlarmAppState();
 }
 
-class _AlarmAppState extends ConsumerState<AlarmApp> {
+class _AlarmAppState extends ConsumerState<AlarmApp> with WidgetsBindingObserver {
   StreamSubscription<plugin.AlarmSet>? _ringingSub;
   bool _showingRingScreen = false;
   bool _initStarted = false;
+
+  /// The sunrise currently on screen, if any — replaced by the ringing
+  /// screen once its alarm actually rings.
+  Route<void>? _sunriseRoute;
+
+  /// The sunrise (alarm id + ring time) last shown, so closing it doesn't
+  /// make it pop right back up on the next app resume.
+  (String, DateTime)? _sunriseShownFor;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ReminderNotificationService.onSunriseTapped = _maybeShowSunrise;
+    ReminderNotificationService.onAwakeConfirmed =
+        (alarmId) => unawaited(confirmAwake(ref, alarmId));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The sunrise notification's full-screen intent brings the app up;
+    // whether to show the sunrise is decided here, from the alarms alone.
+    if (state == AppLifecycleState.resumed) _maybeShowSunrise();
+  }
 
   void _ensureInit() {
     if (_initStarted) return;
@@ -55,6 +82,37 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     _ringingSub = scheduler.ringing.listen(_onRingingChanged);
   }
 
+  void _maybeShowSunrise() {
+    if (_showingRingScreen || _sunriseRoute != null) return;
+    final navigator = navigatorKey.currentState;
+    final alarms = ref.read(alarmsProvider).valueOrNull;
+    if (navigator == null || alarms == null) return;
+    final paused = ref.read(settingsProvider).valueOrNull?.alarmsPaused ?? false;
+    final active = activeSunrise(alarms, DateTime.now(), paused: paused);
+    if (active == null) return;
+    final key = (active.alarm.id, active.ringsAt);
+    if (_sunriseShownFor == key) return;
+    _sunriseShownFor = key;
+
+    unawaited(ref.read(reminderNotificationServiceProvider).cancelSunrise(active.alarm.id));
+    unawaited(ref.read(lockscreenServiceProvider).showOverLockscreen(dismissKeyguard: false));
+    final route = MaterialPageRoute<void>(
+      builder: (_) => SunriseScreen(
+        alarmId: active.alarm.id,
+        startsAt: active.startsAt,
+        ringsAt: active.ringsAt,
+      ),
+      fullscreenDialog: true,
+    );
+    _sunriseRoute = route;
+    navigator.push(route).then((_) {
+      if (_sunriseRoute == route) _sunriseRoute = null;
+      if (!_showingRingScreen) {
+        unawaited(ref.read(lockscreenServiceProvider).restoreLockscreen());
+      }
+    });
+  }
+
   void _onRingingChanged(plugin.AlarmSet alarmSet) {
     if (_showingRingScreen || alarmSet.alarms.isEmpty) return;
     final settings = alarmSet.alarms.first;
@@ -62,33 +120,53 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     if (ringingRef == null) return;
 
     _showingRingScreen = true;
-    unawaited(ref.read(historyProvider.notifier).record(
-          HistoryEntry(
-            id: _uuid.v4(),
-            kind: ringingRef.kind,
-            refId: ringingRef.refId,
-            label: _labelFor(ringingRef),
-            action: HistoryAction.rang,
-            timestamp: DateTime.now(),
-          ),
-        ));
+    final sunrise = _sunriseRoute;
+    if (sunrise != null) {
+      _sunriseRoute = null;
+      navigatorKey.currentState?.removeRoute(sunrise);
+    }
+    if (!ringingRef.isWakeCheck) {
+      unawaited(ref.read(historyProvider.notifier).record(
+            HistoryEntry(
+              id: _uuid.v4(),
+              kind: ringingRef.kind,
+              refId: ringingRef.refId,
+              label: _labelFor(ringingRef),
+              action: HistoryAction.rang,
+              timestamp: DateTime.now(),
+            ),
+          ));
+    }
     // Guarantees the ringing screen is visible/usable even if the device was
     // fully locked and asleep when the alarm fired — see LockscreenService.
     unawaited(ref.read(lockscreenServiceProvider).showOverLockscreen());
-    if (ringingRef.kind == RingingKind.alarm) {
+    if (ringingRef.kind == RingingKind.alarm && !ringingRef.isWakeCheck) {
       // The reminder notification's job is done once the alarm itself rings.
-      unawaited(ref.read(reminderNotificationServiceProvider).cancelReminder(ringingRef.refId));
+      final reminders = ref.read(reminderNotificationServiceProvider);
+      unawaited(reminders.cancelReminder(ringingRef.refId));
+      unawaited(reminders.cancelSunrise(ringingRef.refId));
     }
     navigatorKey.currentState
-        ?.push(
+        ?.push<bool>(
           MaterialPageRoute(
             builder: (_) => RingingScreen(ringingRef: ringingRef),
             fullscreenDialog: true,
           ),
         )
-        .then((_) {
+        .then((showGoodMorning) async {
       _showingRingScreen = false;
-      unawaited(ref.read(lockscreenServiceProvider).restoreLockscreen());
+      if (showGoodMorning == true) {
+        await navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => GoodMorningScreen(alarmId: ringingRef.refId),
+            fullscreenDialog: true,
+          ),
+        );
+      }
+      // Another alarm may have started ringing while good morning showed.
+      if (!_showingRingScreen) {
+        unawaited(ref.read(lockscreenServiceProvider).restoreLockscreen());
+      }
     });
   }
 
@@ -109,6 +187,9 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ReminderNotificationService.onSunriseTapped = null;
+    ReminderNotificationService.onAwakeConfirmed = null;
     _ringingSub?.cancel();
     super.dispose();
   }
@@ -157,7 +238,15 @@ class _AlarmAppState extends ConsumerState<AlarmApp> {
     // Re-sync whenever the alarm list changes, or when the custom sound
     // catalog or pause setting changes (e.g. a sound an alarm points to gets
     // deleted, or "pause all" gets toggled).
-    ref.listen(alarmsProvider, (previous, next) => syncNow());
+    ref.listen(alarmsProvider, (previous, next) {
+      syncNow();
+      // A cold start from the sunrise notification has no "resumed" event
+      // to hook into, so check once the alarms first finish loading.
+      // Post-frame, so the navigator exists even on the very first frame.
+      if (previous?.hasValue != true && next.hasValue) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSunrise());
+      }
+    });
     ref.listen(customSoundsProvider, (previous, next) => syncNow());
     ref.listen(
       settingsProvider.select((s) => s.valueOrNull?.alarmsPaused),

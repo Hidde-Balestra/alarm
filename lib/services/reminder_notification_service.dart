@@ -14,29 +14,67 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 const _skipOnceActionId = 'skip_once';
+const _awakeActionId = 'awake';
+const _sunrisePayloadPrefix = 'sunrise:';
+
 const _channelId = 'alarm_reminder_channel';
 const _channelName = 'Alarm reminder';
 const _channelDescription =
     'A quiet heads-up shortly before an alarm rings, with an option to skip it.';
 
+const _sunriseChannelId = 'sunrise_channel';
+const _sunriseChannelName = 'Sunrise';
+const _sunriseChannelDescription =
+    'Silently wakes the screen to start the sunrise light before an alarm.';
+
+const _wakeCheckChannelId = 'wake_check_channel';
+const _wakeCheckChannelName = 'Are you awake?';
+const _wakeCheckChannelDescription =
+    'Asks for confirmation shortly after an alarm is dismissed, before it rings again.';
+
 /// How long before an alarm is due to ring the silent reminder notification
 /// (with its "skip once" action) is shown.
 const reminderLeadTime = Duration(minutes: 12);
 
-/// Schedules a quiet, no-sound notification [reminderLeadTime] before an
-/// alarm is due to ring, with an action to skip that one occurrence without
-/// having to open the app. Android-only: the `alarm` plugin's own
-/// full-screen ringing UI already covers iOS's more limited notification
-/// model.
+/// How long after dismissing (with `Alarm.wakeUpCheck` on) the "are you
+/// awake?" notification appears…
+const wakeCheckPromptDelay = Duration(minutes: 3);
+
+/// …and how long after dismissing the alarm rings again if that
+/// notification wasn't confirmed by then.
+const wakeCheckRingDelay = Duration(minutes: 5);
+
+/// Owns the app's `flutter_local_notifications` notifications (as opposed to
+/// the `alarm` plugin's own ringing notifications). Android-only: the
+/// `alarm` plugin's full-screen ringing UI already covers iOS's more limited
+/// notification model.
 ///
-/// The "skip once" action is handled by [_onNotificationResponse] below,
-/// which works whether the app is in the foreground, backgrounded, or fully
-/// killed — it re-derives everything it needs (the alarm list, the locale,
-/// the scheduler) from storage each time rather than relying on any
-/// in-memory app state, since a killed app has none.
+/// - A quiet reminder [reminderLeadTime] before an alarm, with an action to
+///   skip that one occurrence without opening the app.
+/// - A silent full-screen-intent "sunrise" trigger `Alarm.sunriseMinutes`
+///   before an alarm. It only wakes the screen and brings the app up; the
+///   app itself decides to show the sunrise (see `activeSunrise`). This is
+///   deliberately *not* an `alarm` plugin alarm: the plugin drops a new
+///   alarm while another one is still ringing, so a "ringing" silent
+///   sunrise could swallow the real alarm.
+/// - The "are you awake?" prompt after dismissing, with an "I'm awake"
+///   action that cancels the follow-up ring.
+///
+/// Actions are handled by [_onNotificationResponse] below, which works
+/// whether the app is in the foreground, backgrounded, or fully killed — it
+/// re-derives everything it needs from storage each time rather than
+/// relying on in-memory app state, since a killed app has none.
 class ReminderNotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+
+  /// Set by the running app so a tap on a sunrise notification while it's
+  /// already open can show the sunrise right away.
+  static VoidCallback? onSunriseTapped;
+
+  /// Set by the running app so confirming from the notification also
+  /// clears the in-app "I'm awake" banner.
+  static void Function(String alarmId)? onAwakeConfirmed;
 
   bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
@@ -63,6 +101,8 @@ class ReminderNotificationService {
   }
 
   int _notificationId(String alarmId) => ('reminder-$alarmId').hashCode & 0x7fffffff;
+  int _sunriseNotificationId(String alarmId) => ('sunrise-$alarmId').hashCode & 0x7fffffff;
+  int _wakeCheckNotificationId(String alarmId) => ('wakecheck-$alarmId').hashCode & 0x7fffffff;
 
   Future<void> scheduleReminder({
     required String alarmId,
@@ -107,18 +147,126 @@ class ReminderNotificationService {
     if (!_isAndroid) return;
     await _plugin.cancel(id: _notificationId(alarmId));
   }
+
+  /// Schedules the silent sunrise trigger [minutes] before [occurrence].
+  /// Cancels instead if that start time has already passed — if the app is
+  /// open during the window anyway, it shows the sunrise by itself.
+  Future<void> scheduleSunrise({
+    required String alarmId,
+    required DateTime occurrence,
+    required int minutes,
+    required String title,
+    required String body,
+  }) async {
+    if (!_isAndroid) return;
+    final start = occurrence.subtract(Duration(minutes: minutes));
+    if (minutes <= 0 || start.isBefore(DateTime.now())) {
+      await cancelSunrise(alarmId);
+      return;
+    }
+    await _plugin.zonedSchedule(
+      id: _sunriseNotificationId(alarmId),
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(start, tz.local),
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sunriseChannelId,
+          _sunriseChannelName,
+          channelDescription: _sunriseChannelDescription,
+          // Full-screen intents need a high-importance channel; it stays
+          // silent through playSound/enableVibration instead.
+          importance: Importance.high,
+          priority: Priority.high,
+          playSound: false,
+          enableVibration: false,
+          fullScreenIntent: true,
+          category: AndroidNotificationCategory.alarm,
+          timeoutAfter: Duration(minutes: minutes).inMilliseconds,
+        ),
+      ),
+      payload: '$_sunrisePayloadPrefix$alarmId',
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelSunrise(String alarmId) async {
+    if (!_isAndroid) return;
+    await _plugin.cancel(id: _sunriseNotificationId(alarmId));
+  }
+
+  /// Shows the "are you awake?" prompt at [at], until [expiresAt] (when the
+  /// follow-up ring takes over).
+  Future<void> scheduleWakeCheckPrompt({
+    required String alarmId,
+    required DateTime at,
+    required DateTime expiresAt,
+    required String title,
+    required String body,
+    required String awakeActionLabel,
+  }) async {
+    if (!_isAndroid) return;
+    await _plugin.zonedSchedule(
+      id: _wakeCheckNotificationId(alarmId),
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(at, tz.local),
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _wakeCheckChannelId,
+          _wakeCheckChannelName,
+          channelDescription: _wakeCheckChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.alarm,
+          timeoutAfter: expiresAt.difference(at).inMilliseconds,
+          actions: [
+            AndroidNotificationAction(_awakeActionId, awakeActionLabel, showsUserInterface: false),
+          ],
+        ),
+      ),
+      payload: alarmId,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelWakeCheckPrompt(String alarmId) async {
+    if (!_isAndroid) return;
+    await _plugin.cancel(id: _wakeCheckNotificationId(alarmId));
+  }
 }
 
 /// Runs for both the foreground and background notification-response
 /// callbacks (the background one must be a top-level or static function).
-/// Only reacts to the "skip once" action; a plain tap on the reminder just
-/// opens the app like any other notification.
 @pragma('vm:entry-point')
 void _onNotificationResponse(NotificationResponse response) {
-  if (response.actionId != _skipOnceActionId) return;
-  final alarmId = response.payload;
-  if (alarmId == null || alarmId.isEmpty) return;
-  unawaited(_skipAlarmOnce(alarmId));
+  final payload = response.payload;
+  if (payload == null || payload.isEmpty) return;
+
+  switch (response.actionId) {
+    case _skipOnceActionId:
+      unawaited(_skipAlarmOnce(payload));
+    case _awakeActionId:
+      unawaited(_confirmAwake(payload));
+    case null:
+      // A plain tap opens the app like any other notification; for the
+      // sunrise one, an already-open app also needs a nudge to show it.
+      if (payload.startsWith(_sunrisePayloadPrefix)) {
+        ReminderNotificationService.onSunriseTapped?.call();
+      }
+  }
+}
+
+Future<void> _confirmAwake(String alarmId) async {
+  final inApp = ReminderNotificationService.onAwakeConfirmed;
+  if (inApp != null) {
+    inApp(alarmId);
+    return;
+  }
+  WidgetsFlutterBinding.ensureInitialized();
+  await plugin.Alarm.init();
+  await AlarmSchedulerService().cancelWakeCheck(alarmId);
+  await ReminderNotificationService().cancelWakeCheckPrompt(alarmId);
 }
 
 Future<void> _skipAlarmOnce(String alarmId) async {
@@ -133,7 +281,7 @@ Future<void> _skipAlarmOnce(String alarmId) async {
   if (index == -1) return;
 
   final alarm = alarms[index];
-  final next = alarm.nextOccurrence(DateTime.now());
+  final next = alarm.nextOccurrenceSkippingHolidays(DateTime.now());
   if (next == null) return;
 
   final updatedAlarms = List.of(alarms);

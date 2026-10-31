@@ -1,4 +1,9 @@
+import 'package:alarm_app/models/holidays.dart';
 import 'package:alarm_app/models/repeat_rule.dart';
+
+/// Sunrise lead-time choices (in minutes) offered in the editor and
+/// Settings; `0` means off. See [Alarm.sunriseMinutes].
+const sunriseMinuteOptions = [0, 10, 15, 20, 30];
 
 /// A user-configured alarm. Time-of-day plus a [RepeatRule] describing when
 /// it recurs; [RepeatRule.nextOccurrence] turns this into the concrete
@@ -38,6 +43,26 @@ class Alarm {
   /// that the user asked to skip, if any. See [effectiveNextOccurrence].
   final DateTime? skippedOccurrence;
 
+  /// How many minutes before ringing the screen starts a slow, silent
+  /// "sunrise" — brightening from dark to warm light. `0` means off.
+  final int sunriseMinutes;
+
+  /// Whether dismissing arms a follow-up "are you awake?" check: unless the
+  /// user confirms within a few minutes, the alarm rings again.
+  final bool wakeUpCheck;
+
+  /// Whether a good-morning screen is shown after dismissing.
+  final bool showGoodMorning;
+
+  /// Whether a repeating alarm stays silent on Dutch public holidays — see
+  /// [dutchHolidayOn]. Ignored for one-shot alarms, which are always for a
+  /// specific day the user picked deliberately.
+  final bool skipHolidays;
+
+  /// A quick nap alarm from the "nap" button: deleted (not just disabled)
+  /// once it's dismissed, so naps don't pile up in the list.
+  final bool isNap;
+
   const Alarm({
     required this.id,
     required this.hour,
@@ -53,22 +78,57 @@ class Alarm {
     this.maxSnoozes = 0,
     this.snoozeCount = 0,
     this.skippedOccurrence,
+    this.sunriseMinutes = 0,
+    this.wakeUpCheck = false,
+    this.showGoodMorning = true,
+    this.skipHolidays = false,
+    this.isNap = false,
   });
 
   DateTime? nextOccurrence(DateTime from) =>
       repeat.nextOccurrence(from, hour: hour, minute: minute);
 
-  /// Like [nextOccurrence], but skips over [skippedOccurrence] if that's
-  /// what would otherwise be returned. Self-healing: a [skippedOccurrence]
-  /// that's already in the past (e.g. the app wasn't reopened in time) is
-  /// simply ignored rather than skipping the occurrence *after* it too.
-  DateTime? effectiveNextOccurrence(DateTime from) {
-    final next = nextOccurrence(from);
+  bool _isSkippedHoliday(DateTime occurrence) =>
+      skipHolidays && repeat.repeats && dutchHolidayOn(occurrence) != null;
+
+  /// Walks forward from [nextOccurrence] past holidays (if [skipHolidays])
+  /// and, when [honorSkip], past [skippedOccurrence]. Bounded so a
+  /// pathological rule can't loop forever; a real one needs at most a few
+  /// steps (e.g. Christmas Day + Boxing Day back to back).
+  DateTime? _nextRinging(DateTime from, {required bool honorSkip}) {
     final skipped = skippedOccurrence;
-    if (next == null || skipped == null) return next;
-    if (skipped.isBefore(from)) return next;
-    if (next != skipped) return next;
-    return repeat.nextOccurrence(next, hour: hour, minute: minute);
+    var next = nextOccurrence(from);
+    for (var i = 0; next != null && i < 64; i++) {
+      final manuallySkipped = honorSkip && skipped != null && next == skipped;
+      if (!manuallySkipped && !_isSkippedHoliday(next)) return next;
+      next = repeat.nextOccurrence(next, hour: hour, minute: minute);
+    }
+    return null;
+  }
+
+  /// When this alarm will actually ring next: like [nextOccurrence], but
+  /// skipping over [skippedOccurrence] and (if [skipHolidays]) holidays.
+  /// Self-healing: a [skippedOccurrence] that's already in the past (e.g.
+  /// the app wasn't reopened in time) is simply ignored rather than
+  /// skipping the occurrence *after* it too.
+  DateTime? effectiveNextOccurrence(DateTime from) {
+    final skipped = skippedOccurrence;
+    final honorSkip = skipped != null && !skipped.isBefore(from);
+    return _nextRinging(from, honorSkip: honorSkip);
+  }
+
+  /// The occurrence a "skip next" action should target: the next one that
+  /// would actually ring, ignoring any existing manual skip — a holiday the
+  /// alarm already stays silent on isn't worth "skipping".
+  DateTime? nextOccurrenceSkippingHolidays(DateTime from) =>
+      _nextRinging(from, honorSkip: false);
+
+  /// The holiday the very next occurrence falls on, if [skipHolidays] makes
+  /// the alarm stay silent then — for a "skipped: King's Day" hint.
+  DutchHoliday? upcomingSkippedHoliday(DateTime from) {
+    final next = nextOccurrence(from);
+    if (next == null || !_isSkippedHoliday(next)) return null;
+    return dutchHolidayOn(next);
   }
 
   Alarm copyWith({
@@ -87,6 +147,11 @@ class Alarm {
     int? snoozeCount,
     DateTime? skippedOccurrence,
     bool clearSkippedOccurrence = false,
+    int? sunriseMinutes,
+    bool? wakeUpCheck,
+    bool? showGoodMorning,
+    bool? skipHolidays,
+    bool? isNap,
   }) {
     return Alarm(
       id: id ?? this.id,
@@ -104,6 +169,11 @@ class Alarm {
       snoozeCount: snoozeCount ?? this.snoozeCount,
       skippedOccurrence:
           clearSkippedOccurrence ? null : (skippedOccurrence ?? this.skippedOccurrence),
+      sunriseMinutes: sunriseMinutes ?? this.sunriseMinutes,
+      wakeUpCheck: wakeUpCheck ?? this.wakeUpCheck,
+      showGoodMorning: showGoodMorning ?? this.showGoodMorning,
+      skipHolidays: skipHolidays ?? this.skipHolidays,
+      isNap: isNap ?? this.isNap,
     );
   }
 
@@ -122,6 +192,11 @@ class Alarm {
         'maxSnoozes': maxSnoozes,
         'snoozeCount': snoozeCount,
         'skippedOccurrence': skippedOccurrence?.toIso8601String(),
+        'sunriseMinutes': sunriseMinutes,
+        'wakeUpCheck': wakeUpCheck,
+        'showGoodMorning': showGoodMorning,
+        'skipHolidays': skipHolidays,
+        'isNap': isNap,
       };
 
   factory Alarm.fromJson(Map<String, dynamic> json) => Alarm(
@@ -143,6 +218,11 @@ class Alarm {
         skippedOccurrence: json['skippedOccurrence'] != null
             ? DateTime.parse(json['skippedOccurrence'] as String)
             : null,
+        sunriseMinutes: json['sunriseMinutes'] as int? ?? 0,
+        wakeUpCheck: json['wakeUpCheck'] as bool? ?? false,
+        showGoodMorning: json['showGoodMorning'] as bool? ?? true,
+        skipHolidays: json['skipHolidays'] as bool? ?? false,
+        isNap: json['isNap'] as bool? ?? false,
       );
 
   @override
@@ -161,7 +241,12 @@ class Alarm {
       other.requireMathToDismiss == requireMathToDismiss &&
       other.maxSnoozes == maxSnoozes &&
       other.snoozeCount == snoozeCount &&
-      other.skippedOccurrence == skippedOccurrence;
+      other.skippedOccurrence == skippedOccurrence &&
+      other.sunriseMinutes == sunriseMinutes &&
+      other.wakeUpCheck == wakeUpCheck &&
+      other.showGoodMorning == showGoodMorning &&
+      other.skipHolidays == skipHolidays &&
+      other.isNap == isNap;
 
   @override
   int get hashCode => Object.hash(
@@ -179,5 +264,10 @@ class Alarm {
         maxSnoozes,
         snoozeCount,
         skippedOccurrence,
+        sunriseMinutes,
+        wakeUpCheck,
+        showGoodMorning,
+        skipHolidays,
+        isNap,
       );
 }
