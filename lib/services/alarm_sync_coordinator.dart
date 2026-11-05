@@ -53,8 +53,8 @@ Future<void> syncAlarmsWithScheduler({
 
 /// Pushes the current in-app alarm list to the reminder notifications, the
 /// same way [syncAlarmsWithScheduler] does for the real OS-level alarm: a
-/// quiet heads-up [reminderLeadTime] before each alarm's next occurrence,
-/// with a "skip once" action, plus the silent sunrise trigger for alarms
+/// silent heads-up [reminderLeadTime] before each alarm's next occurrence,
+/// with a "just this once" action, plus the silent sunrise trigger for alarms
 /// that have one. Safe to call any time the alarm list changes.
 Future<void> syncReminderNotifications({
   required List<Alarm> alarms,
@@ -75,9 +75,9 @@ Future<void> syncReminderNotifications({
     await reminders.scheduleReminder(
       alarmId: alarm.id,
       occurrence: next,
-      title: l10n.alarmReminderTitle(reminderLeadTime.inMinutes),
+      title: l10n.alarmReminderTitle(_formatTime(next)),
       body: body,
-      skipActionLabel: l10n.skipNextAction,
+      skipActionLabel: l10n.reminderSkipOnceAction,
     );
     await reminders.scheduleSunrise(
       alarmId: alarm.id,
@@ -88,6 +88,11 @@ Future<void> syncReminderNotifications({
     );
   }
 }
+
+/// Plain "07:00". Deliberately not `DateFormat`: this also runs from the
+/// notification-action isolate, where intl's locale data isn't loaded.
+String _formatTime(DateTime at) =>
+    '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
 
 /// An alarm whose sunrise window (`sunriseMinutes` before it rings) is
 /// running right now.

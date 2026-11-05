@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:alarm/alarm.dart' as plugin;
 import 'package:alarm_app/l10n/gen/app_localizations.dart';
+import 'package:alarm_app/models/alarm.dart';
 import 'package:alarm_app/models/app_settings.dart';
 import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:alarm_app/services/alarm_sync_coordinator.dart';
@@ -17,10 +18,13 @@ const _skipOnceActionId = 'skip_once';
 const _awakeActionId = 'awake';
 const _sunrisePayloadPrefix = 'sunrise:';
 
-const _channelId = 'alarm_reminder_channel';
+// A new id (not `alarm_reminder_channel`): Android fixes a channel's
+// importance once created, and the old low-importance one kept the
+// reminder off the lock screen.
+const _channelId = 'alarm_reminder_lockscreen_channel';
 const _channelName = 'Alarm reminder';
 const _channelDescription =
-    'A quiet heads-up shortly before an alarm rings, with an option to skip it.';
+    'A silent heads-up an hour before an alarm rings, with an option to turn it off just once.';
 
 const _sunriseChannelId = 'sunrise_channel';
 const _sunriseChannelName = 'Sunrise';
@@ -34,11 +38,11 @@ const _wakeCheckChannelDescription =
 
 /// How long before an alarm is due to ring the silent reminder notification
 /// (with its "skip once" action) is shown.
-const reminderLeadTime = Duration(minutes: 12);
+const reminderLeadTime = Duration(hours: 1);
 
 /// How long after dismissing (with `Alarm.wakeUpCheck` on) the "are you
 /// awake?" notification appears…
-const wakeCheckPromptDelay = Duration(minutes: 3);
+const wakeCheckPromptDelay = Duration(minutes: 1);
 
 /// …and how long after dismissing the alarm rings again if that
 /// notification wasn't confirmed by then.
@@ -49,8 +53,9 @@ const wakeCheckRingDelay = Duration(minutes: 5);
 /// `alarm` plugin's full-screen ringing UI already covers iOS's more limited
 /// notification model.
 ///
-/// - A quiet reminder [reminderLeadTime] before an alarm, with an action to
-///   skip that one occurrence without opening the app.
+/// - A silent reminder [reminderLeadTime] before an alarm, visible on the
+///   lock screen, with an action to turn it off for just that one ring
+///   without opening the app (see [skipAlarmOnce]).
 /// - A silent full-screen-intent "sunrise" trigger `Alarm.sunriseMinutes`
 ///   before an alarm. It only wakes the screen and brings the app up; the
 ///   app itself decides to show the sunrise (see `activeSunrise`). This is
@@ -128,11 +133,14 @@ class ReminderNotificationService {
           _channelId,
           _channelName,
           channelDescription: _channelDescription,
-          importance: Importance.low,
-          priority: Priority.low,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
           playSound: false,
           enableVibration: false,
           silent: true,
+          visibility: NotificationVisibility.public,
+          category: AndroidNotificationCategory.reminder,
+          timeoutAfter: reminderLeadTime.inMilliseconds,
           actions: [
             AndroidNotificationAction(_skipOnceActionId, skipActionLabel, showsUserInterface: false),
           ],
@@ -219,6 +227,9 @@ class ReminderNotificationService {
           importance: Importance.high,
           priority: Priority.high,
           category: AndroidNotificationCategory.alarm,
+          // Shown in full on the lock screen, so "I'm awake" works without
+          // unlocking first.
+          visibility: NotificationVisibility.public,
           timeoutAfter: expiresAt.difference(at).inMilliseconds,
           actions: [
             AndroidNotificationAction(_awakeActionId, awakeActionLabel, showsUserInterface: false),
@@ -269,6 +280,23 @@ Future<void> _confirmAwake(String alarmId) async {
   await ReminderNotificationService().cancelWakeCheckPrompt(alarmId);
 }
 
+/// The alarm list after turning [alarmId] off for just its next ring, or
+/// null if there's nothing to skip. A repeating alarm skips that one
+/// occurrence; a one-shot alarm (whose "next time" is the only time) is
+/// switched off instead of being pushed to tomorrow, and a nap is removed.
+List<Alarm>? skipAlarmOnce(List<Alarm> alarms, String alarmId, DateTime now) {
+  final index = alarms.indexWhere((a) => a.id == alarmId);
+  if (index == -1) return null;
+  final alarm = alarms[index];
+  if (alarm.isNap) return [...alarms]..removeAt(index);
+  if (!alarm.repeat.repeats) {
+    return [...alarms]..[index] = alarm.copyWith(enabled: false);
+  }
+  final next = alarm.nextOccurrenceSkippingHolidays(now);
+  if (next == null) return null;
+  return [...alarms]..[index] = alarm.copyWith(skippedOccurrence: next);
+}
+
 Future<void> _skipAlarmOnce(String alarmId) async {
   WidgetsFlutterBinding.ensureInitialized();
   // Required before touching AlarmStorage (via plugin.Alarm.set/stop) in a
@@ -277,28 +305,28 @@ Future<void> _skipAlarmOnce(String alarmId) async {
 
   final storage = StorageService();
   final alarms = await storage.loadAlarms();
-  final index = alarms.indexWhere((a) => a.id == alarmId);
-  if (index == -1) return;
-
-  final alarm = alarms[index];
-  final next = alarm.nextOccurrenceSkippingHolidays(DateTime.now());
-  if (next == null) return;
-
-  final updatedAlarms = List.of(alarms);
-  updatedAlarms[index] = alarm.copyWith(skippedOccurrence: next);
+  final updatedAlarms = skipAlarmOnce(alarms, alarmId, DateTime.now());
+  if (updatedAlarms == null) return;
   await storage.saveAlarms(updatedAlarms);
+
+  final scheduler = AlarmSchedulerService();
+  final reminders = ReminderNotificationService();
+  await reminders.init();
+  if (!updatedAlarms.any((a) => a.id == alarmId)) {
+    // A removed nap is no longer in the list for the sync below to cancel.
+    await scheduler.cancelAlarm(alarmId);
+    await reminders.cancelReminder(alarmId);
+    await reminders.cancelSunrise(alarmId);
+  }
 
   final settings = await storage.loadSettings();
   final customSounds = await storage.loadCustomSounds();
   final l10n = lookupAppLocalizations(resolveEffectiveLocale(settings));
 
-  final reminders = ReminderNotificationService();
-  await reminders.init();
-
   await syncAlarmsWithScheduler(
     alarms: updatedAlarms,
     customSounds: customSounds,
-    scheduler: AlarmSchedulerService(),
+    scheduler: scheduler,
     l10n: l10n,
     paused: settings.alarmsPaused,
   );

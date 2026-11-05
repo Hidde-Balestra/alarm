@@ -24,9 +24,10 @@ A Flutter alarm clock & timer app for Android and iOS, built for reliability: al
 - Relaxing bundled sounds (wind chimes, harp, ocean waves, sunrise pad) alongside the classic ones.
 - Per-alarm "waking up" options, each with a default in Settings:
   - **Sunrise light**: 10–30 minutes before the alarm, the screen silently brightens from dark to warm light (Android; started by a silent full-screen notification, never by a second `alarm`-plugin alarm, so it can't block the real one).
-  - **"Are you awake?" check**: after dismissing, a notification asks you to confirm; if you don't within 5 minutes, the alarm rings again.
+  - **"Are you awake?" check**: a minute after dismissing, a notification (also shown on the lock screen) asks you to confirm; if you don't within 5 minutes of dismissing, the alarm rings again.
   - **Good-morning screen** after dismissing: greeting, date, your streak, the next alarm and a thought for the day.
   - **Skip Dutch public holidays** on repeating alarms (King's Day, Easter, Ascension, Whitsun, Christmas, New Year's Day, and Liberation Day in lustrum years).
+- A silent reminder an hour before each alarm, visible on the lock screen, with a "turn off just this once" action (a repeating alarm skips that one ring; a one-off alarm is switched off).
 - A nap button: one tap for a 10–90 minute one-shot alarm that removes itself once dismissed.
 
 ## Reliability notes

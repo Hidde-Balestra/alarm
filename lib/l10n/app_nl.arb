@@ -67,9 +67,10 @@
 
   "alarmRingingTitle": "Wekker",
   "timerFinishedTitle": "Timer afgelopen",
-  "alarmReminderTitle": "Wekker over {minutes} min",
+  "alarmReminderTitle": "Wekker om {time}",
+  "reminderSkipOnceAction": "Alleen deze keer uitzetten",
   "@alarmReminderTitle": {
-    "placeholders": {"minutes": {"type": "int"}}
+    "placeholders": {"time": {"type": "String"}}
   },
   "dismiss": "Stoppen",
   "snooze": "Sluimeren",
